@@ -1,0 +1,49 @@
+---
+title: Project Starter
+description: A production-ready SaaS starter with auth, an admin panel, organizations, billing and more.
+---
+
+Project Starter is a monorepo for building a SaaS product. It ships the parts every product needs, so you can start on the parts that make yours different.
+
+It combines three sources:
+
+- **Batman**, a Next.js boilerplate: the features.
+- **Guardrail**, a set of engineering rules: how code is written and secured.
+- **tarikcrafts-platform**, a stack: Drizzle on Neon Postgres, tRPC, Better Auth, Varlock and Nx.
+
+## What you get
+
+| Area        | Included                                                                                                                                                         |
+| ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Auth        | Email and password, email verification, password reset, Google and GitHub login, roles and permissions, ban and impersonation                                    |
+| Admin panel | Overview, users, analytics, blog, notifications, products, feedback, general settings, site settings, feature toggles, API keys, audit log, deployment checklist |
+| User area   | Dashboard, onboarding, organizations and invitations, notifications inbox, profile and account settings, a subscription-gated Pro area                           |
+| Public site | Landing, pricing, blog, legal pages, waitlist, countdown and maintenance modes                                                                                   |
+| Billing     | Polar products, checkout and a signed webhook                                                                                                                    |
+| Platform    | One security checkpoint for every API call, audit log, rate limits, encrypted secrets, module registry, theme presets                                            |
+
+## Stack
+
+Next.js 16, tRPC 11, Drizzle ORM on Postgres (Neon or Docker), Better Auth 1.7, Varlock, shadcn/ui with Tailwind CSS 4, TanStack Form and Query, Resend, Polar, Cloudflare R2, pnpm 11, Nx, TypeScript 6, Oxlint and Oxfmt, Vitest. An Expo app and this Fumadocs site live in the same workspace.
+
+## Where to go next
+
+<Cards>
+  <Card
+    title="Getting started"
+    href="/docs/getting-started"
+    description="Install, set up a database and run the app."
+  />
+</Cards>
+
+The full documentation lives in the repository:
+
+| File                                | Covers                                                        |
+| ----------------------------------- | ------------------------------------------------------------- |
+| `README.md`                         | Overview, commands, project structure, starting a new product |
+| `docs/SETUP.md`                     | From zero to a running app, with troubleshooting              |
+| `docs/ENVIRONMENT.md`               | Every environment variable                                    |
+| `docs/engineering/00-start-here.md` | Architecture and conventions, in reading order                |
+| `docs/engineering/deployment.md`    | Deploying to Vercel with Neon                                 |
+| `docs/engineering/security.md`      | What the starter enforces                                     |
+| `CLAUDE.md`                         | Rules for AI coding agents                                    |

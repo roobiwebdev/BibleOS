@@ -1,0 +1,23 @@
+{
+  "$schema": "./node_modules/nx/schemas/nx-schema.json",
+  "namedInputs": {
+    "default": ["{projectRoot}/**/*", "sharedGlobals"],
+    "production": [
+      "default",
+      "!{projectRoot}/.next/**",
+      "!{projectRoot}/dist/**",
+      "!{projectRoot}/**/*.test.ts",
+      "!{projectRoot}/vitest.config.ts",
+      "!{workspaceRoot}/apps/native/.expo/**",
+      "!{workspaceRoot}/apps/native/ios/**",
+      "!{workspaceRoot}/apps/native/android/**"
+    ],
+    "sharedGlobals": ["{workspaceRoot}/tsconfig.json", "{workspaceRoot}/packages/config/tsconfig.base.json"]
+  },
+  "targetDefaults": {
+    "build": { "dependsOn": ["^build"], "inputs": ["production", "^production"], "outputs": ["{projectRoot}/.next"] },
+    "check-types": { "dependsOn": ["^check-types"], "inputs": ["default", "^default"] },
+    "test": { "inputs": ["default", "^default"] },
+    "dev": { "cache": false, "continuous": true }
+  }
+}
