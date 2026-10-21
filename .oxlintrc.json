@@ -1,0 +1,29 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["typescript", "unicorn", "oxc", "react", "nextjs", "import"],
+  "categories": {
+    "correctness": "error",
+    "suspicious": "warn"
+  },
+  "rules": {
+    "typescript/no-explicit-any": "error",
+    "typescript/no-non-null-assertion": "error",
+    "typescript/ban-ts-comment": "error",
+    "react/rules-of-hooks": "error",
+    "react/react-in-jsx-scope": "off",
+    "import/no-unassigned-import": "off",
+    "react/no-unstable-nested-components": ["warn", { "allowAsProps": true }],
+    "no-console": ["warn", { "allow": ["warn", "error", "info", "log"] }]
+  },
+  "env": { "builtin": true, "browser": true, "node": true },
+  "ignorePatterns": [
+    "**/node_modules/**",
+    "**/.next/**",
+    "**/dist/**",
+    "**/src/env.ts",
+    "**/next-env.d.ts",
+    "packages/db/migrations/**",
+    "apps/docs/.source/**",
+    ".reference/**"
+  ]
+}

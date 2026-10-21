@@ -1,0 +1,64 @@
+---
+title: Getting started
+description: Install dependencies, set up Postgres and run the app locally.
+---
+
+## Prerequisites
+
+- Node.js 22 or newer
+- pnpm 11 (`corepack enable`)
+- Docker for a local Postgres, or a Neon database
+
+## Install and set up
+
+```bash
+pnpm install
+
+# Local Postgres in Docker, default settings:
+pnpm bootstrap --yes --docker
+
+# Or interactive (choose Docker or paste a Neon pooled URL, optionally create an admin):
+pnpm bootstrap
+```
+
+`pnpm bootstrap` writes `apps/web/.env`, generates `BETTER_AUTH_SECRET` and `APP_ENCRYPTION_KEY`, then runs the migrations and the seed. It keeps any values already in the file.
+
+## Run
+
+```bash
+pnpm dev
+```
+
+Open http://localhost:3001.
+
+The first account that signs up becomes admin. To create one instead, set `SEED_ADMIN_EMAIL` and `SEED_ADMIN_PASSWORD` in `apps/web/.env` and run `pnpm db:seed`.
+
+Without a Resend key, emails are printed in the terminal running `pnpm dev`. Copy verification and reset links from there.
+
+## Configure
+
+Open `/admin` and set:
+
+- **General:** app name, description, SEO, theme, legal pages
+- **Features:** onboarding, email verification, social login, organizations, invitations
+- **API Keys:** R2, Resend, Google, GitHub and Polar. Keys saved here are encrypted and override `.env`.
+
+## Useful commands
+
+| Command                                | What it does                             |
+| -------------------------------------- | ---------------------------------------- |
+| `pnpm dev`                             | Web app on port 3001                     |
+| `pnpm dev:docs`                        | This docs site on port 4000              |
+| `pnpm check`                           | Lint, format check, type check and tests |
+| `pnpm db:generate` / `pnpm db:migrate` | Create / apply a migration               |
+| `pnpm db:studio`                       | Browse the database                      |
+| `pnpm db:reset`                        | Rebuild the local database from zero     |
+
+## Learn more
+
+The repository has the full guides:
+
+- `docs/SETUP.md`: step by step setup and troubleshooting
+- `docs/ENVIRONMENT.md`: every environment variable
+- `docs/engineering/06-adding-a-feature.md`: a worked example from schema to page
+- `docs/engineering/modules.md`: switching modules off or removing them

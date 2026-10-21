@@ -1,0 +1,55 @@
+{
+  "name": "project-starter",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "type": "module",
+  "scripts": {
+    "bootstrap": "tsx scripts/bootstrap.ts",
+    "dev": "nx run-many -t dev --projects=web",
+    "dev:web": "nx run-many -t dev --projects=web",
+    "dev:docs": "nx run-many -t dev --projects=docs",
+    "dev:native": "nx run-many -t dev --projects=native",
+    "dev:all": "nx run-many -t dev",
+    "build": "nx run-many -t build --projects=web,docs",
+    "check-types": "nx run-many -t check-types",
+    "test": "nx run-many -t test",
+    "test:integration": "pnpm --filter @starter/api test",
+    "lint": "oxlint",
+    "format": "oxfmt --write",
+    "format:check": "oxfmt --check",
+    "check": "pnpm lint && pnpm format:check && pnpm check-types && pnpm test",
+    "db:generate": "pnpm --filter @starter/db db:generate",
+    "db:migrate": "pnpm --filter @starter/db db:migrate",
+    "db:push": "pnpm --filter @starter/db db:push",
+    "db:studio": "pnpm --filter @starter/db db:studio",
+    "db:seed": "pnpm --filter web db:seed",
+    "db:reset": "pnpm --filter @starter/db db:reset && pnpm --filter web db:seed",
+    "auth:check": "pnpm --filter @starter/auth test",
+    "env:generate": "varlock codegen --path ./apps/web/ && varlock codegen --path ./apps/native/ && varlock codegen --path ./packages/db/",
+    "postinstall": "pnpm env:generate",
+    "deploy:setup": "pnpm dlx vercel link",
+    "env:preview": "tsx scripts/sync-vercel-env.ts preview",
+    "env:production": "tsx scripts/sync-vercel-env.ts production",
+    "deploy": "pnpm dlx vercel deploy",
+    "deploy:prod": "pnpm dlx vercel deploy --prod",
+    "deploy:check": "pnpm dlx vercel deploy --dry"
+  },
+  "devDependencies": {
+    "@starter/config": "workspace:*",
+    "@types/node": "catalog:",
+    "nx": "^23.3.0",
+    "oxfmt": "^0.72.0",
+    "oxlint": "^1.87.0",
+    "tsx": "^4.23.13",
+    "typescript": "catalog:",
+    "varlock": "catalog:",
+    "zod": "catalog:"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "packageManager": "pnpm@11.25.0"
+}
