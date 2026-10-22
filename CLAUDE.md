@@ -128,6 +128,9 @@ pnpm test:integration   API tests against a real database (needs TEST_DATABASE_U
 pnpm auth:check         verify the Drizzle schema has every table/column Better Auth expects
 pnpm db:generate | db:migrate | db:seed | db:reset | db:studio
 pnpm build              production build (web + docs)
+pnpm rea <command>      REA reverse-engineering CLI (also the `rea` MCP server in .mcp.json)
 ```
+
+To study how a feature works in an existing app or binary before building our own version, use the `reverse-engineer-anything` skill with the `rea` MCP server. Rebuild the behavior in this codebase following the rules above; never copy third-party code.
 
 Keep this file and `docs/engineering/` updated when you change structure, commands or conventions.

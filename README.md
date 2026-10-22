@@ -4,6 +4,18 @@ Project Starter is a production-ready monorepo for building a SaaS product. It s
 
 > **Status.** Every Batman feature is ported and verified from a clean clone: install, `pnpm bootstrap`, `pnpm check` (lint, format, types, unit and database tests), production build and the Playwright smoke tests all pass. Real OAuth logins, Resend delivery, Polar checkout and R2 uploads need your own keys, so they are covered by unit tests but not yet verified against the live services. See [Known gaps](#known-gaps).
 
+## Install
+
+Copy and paste this to start a new project (needs Node 22+, pnpm 11, and Docker or a Neon database):
+
+```bash
+git clone https://github.com/roobiwebdev/Projects-Starter my-app
+cd my-app && pnpm install && pnpm bootstrap
+pnpm dev
+```
+
+Then open http://localhost:3001. Replace `my-app` with your project's name. To give the new project its own git history (so it never pushes to the starter repo), run `rm -rf .git && git init` inside it. The steps after this are in [Start a new project from this starter](#start-a-new-project-from-this-starter).
+
 ## Features
 
 **Authentication** (Better Auth 1.7)
@@ -123,6 +135,7 @@ All commands run from the repository root.
 | `pnpm deploy:setup`                                      | Link the repo to a Vercel project                                                                                                          |
 | `pnpm env:preview` / `pnpm env:production`               | Copy env values from an env file to Vercel                                                                                                 |
 | `pnpm deploy` / `pnpm deploy:prod` / `pnpm deploy:check` | Preview deploy / production deploy / dry run                                                                                               |
+| `pnpm rea <command>`                                     | REA reverse-engineering CLI (see [Reverse engineering with REA](#reverse-engineering-with-rea))                                            |
 
 ## Project structure
 
@@ -156,7 +169,7 @@ Project-Starter/
 
 ## Start a new project from this starter
 
-1. **Copy the repo** and give it a new name in the root `package.json`.
+1. **Clone the repo** with the [Install](#install) command, then give it a new name in the root `package.json`.
 2. **Rename the package scope (optional).** Packages are named `@starter/*`. To rename, change every `package.json` name and dependency, every import, and `transpilePackages` in `apps/web/next.config.ts`. Then run `pnpm install` and `pnpm check-types`.
 3. **Branding.** Edit `packages/config/src/branding.ts`. The live app name, description and SEO come from Admin > General (stored in the database), so set them there too after the first sign-in. The database default for the app name is in `packages/db/src/schema/app.ts`.
 4. **Theme.** Pick a preset in Admin > General, or add your own (see [customizing.md](docs/engineering/customizing.md)).
@@ -166,6 +179,19 @@ Project-Starter/
 8. **New secrets.** Delete `apps/web/.env` and run `pnpm bootstrap` to generate a fresh `BETTER_AUTH_SECRET` and `APP_ENCRYPTION_KEY`. Never copy these between projects.
 9. **Integrations.** Add R2, Resend, OAuth and Polar keys in Admin > API Keys.
 10. **Docs site.** Update `appName` and `gitConfig` in `apps/docs/src/lib/shared.ts`.
+
+## Reverse engineering with REA
+
+The repo ships with [REA (Reverse Engineer Anything)](https://github.com/morluto/rea) wired into Claude Code, so an agent can study how a feature works in an existing app (a native binary, an Electron or JavaScript bundle, a .NET assembly or a live website) and then build your own version here.
+
+- **MCP server:** `.mcp.json` registers `rea` (`npx -y rea-agents@6.7.0 mcp`, compact schemas). Claude Code asks you to approve the project's MCP servers the first time you open the repo. Nothing is installed globally.
+- **Skill:** `.agents/skills/reverse-engineer-anything` (linked from `.claude/skills/`) tells the agent when and how to use REA. It matches REA 6.7.0 and keeps REA's MIT licence.
+- **Ask your agent:** "Understand how search works in the Notes app, show me the evidence, and build a similar feature for this project."
+- **Terminal:** `pnpm rea --help`, or for example `pnpm rea analyze-javascript-application /absolute/path/to/app --json`.
+- **Native binaries** need Hopper, Ghidra or IDA installed. JavaScript, Electron and website analysis need nothing extra. Run `pnpm rea doctor --client claude_code --json` to see what is available.
+- **Update:** change `6.7.0` in `.mcp.json` and the `rea` script in `package.json`, then refresh the skill from the new `rea-agents` package (`npm pack rea-agents@<version>` and copy `package/skills/reverse-engineer-anything`).
+
+Only analyse software you are allowed to inspect, and rebuild features in your own code rather than copying someone else's.
 
 ## Documentation
 
