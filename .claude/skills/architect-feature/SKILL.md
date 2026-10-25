@@ -63,11 +63,12 @@ compile until every required check is passed in.)
 
 When it's time to build (after plan approval), enforce/remind:
 
-- **New branch per feature** before building; commit frequently; undo the branch if it
-  breaks.
-- **Never touch the user's Git files yourself** — the user handles commits/branches. If a
-  commit/branch action comes up, tell the user to do it; don't run git write commands
-  unless they explicitly ask.
+- **One worktree and branch per feature** before building: use the `new-feature` skill
+  (worktree in `.worktrees/`, branch `agent/<task-name>` from `origin/main`). Commit
+  frequently on that branch; drop the branch if it breaks.
+- **Git limits** (CLAUDE.md section 0, rule 7): commit and push only your own task branch.
+  Never commit or push to `main`, merge, or plain `--force`. Open a PR only when the user
+  asks for it.
 - **Reuse existing architecture** — the app's architecture, multi-tenancy, and
   organizations are already wired; don't rebuild what exists or re-explain the app.
 - Prompt/build at the **architectural level** (structure & reuse intent), not low-level

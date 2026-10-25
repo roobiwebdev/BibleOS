@@ -76,7 +76,7 @@ security logic re-written in every endpoint.
 
 **User-side habits the skill should remind the user about:**
 
-- **Never let Claude touch Git files** — do commits/branches yourself; deny if it asks.
+- **Git stays on task branches** — Claude works in its own worktree and branch (`new-feature` skill), commits and pushes only that branch, never `main`, and never merges or opens a PR unless you ask.
 - **New branch per feature** — if it breaks, undo the whole branch in one click.
 - **Commit frequently; undo when something goes wrong.** That's the safety net.
 - **`claude --dangerously-skip-permissions`** = autopilot (convenient; know the risk).
