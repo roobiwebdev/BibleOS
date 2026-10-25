@@ -164,6 +164,7 @@ Project-Starter/
 ├── scripts/                 bootstrap.ts, sync-vercel-env.ts
 ├── .github/workflows/ci.yml lint, format, types, migrate, tests, web build on every push and PR
 ├── docs/                    engineering guides, setup, environment reference
+├── .agents/skills/          agent skills (linked from .claude/skills/, pinned in skills-lock.json)
 └── CLAUDE.md                rules for AI coding agents (AGENTS.md points here)
 ```
 
@@ -179,6 +180,23 @@ Project-Starter/
 8. **New secrets.** Delete `apps/web/.env` and run `pnpm bootstrap` to generate a fresh `BETTER_AUTH_SECRET` and `APP_ENCRYPTION_KEY`. Never copy these between projects.
 9. **Integrations.** Add R2, Resend, OAuth and Polar keys in Admin > API Keys.
 10. **Docs site.** Update `appName` and `gitConfig` in `apps/docs/src/lib/shared.ts`.
+
+## Agent skills
+
+Claude Code loads these skills on demand when a task matches (or type `/<skill-name>`). They live in `.agents/skills/` and are linked from `.claude/skills/`. Skills from public repos are pinned in `skills-lock.json`; run `npx skills update` to refresh them. How they fit together is in [CLAUDE.md](CLAUDE.md), section 10.
+
+| Area       | Skills                                                                                                                                                                                                                                        |
+| ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Planning   | `architect-feature`: plan a feature with source-of-truth reuse and a security pass before writing code                                                                                                                                        |
+| Workflow   | `new-feature`: one git worktree and branch per task · `evidence-driven-testing`: record proof that changed behavior works · `before-and-after`: before/after screenshot tables · `unslop`: strip AI-sounding prose from commits, PRs and docs |
+| Web and UI | `shadcn`, `web-design-guidelines`, `vercel-react-best-practices`, `vercel-composition-patterns`                                                                                                                                               |
+| Auth       | `better-auth-best-practices`, `better-auth-security-best-practices`, `email-and-password-best-practices`                                                                                                                                      |
+| Database   | `neon-postgres`                                                                                                                                                                                                                               |
+| Mobile     | `expo-overview`, `expo-router`, `expo-native-ui`, `expo-data-fetching`, `expo-dev-client`, `eas-workflows`, `eas-app-stores`, `heroui-native`, `vercel-react-native-skills`                                                                   |
+| Deploy     | `deploy-to-vercel`                                                                                                                                                                                                                            |
+| Research   | `reverse-engineer-anything` (see below)                                                                                                                                                                                                       |
+
+Workflow skills come from [michaelshimeles/skills](https://github.com/michaelshimeles/skills). `before-and-after` is vendored from vercel-labs under PolyForm Shield 1.0.0 and `unslop` from cursor/plugins under MIT; both licences sit in their folders. Starter-specific rules (worktrees in `.worktrees/`, evidence in `.artifacts/`, screenshots stay local unless you ask for an upload) are in `CLAUDE.md` so the skills themselves stay untouched and updatable. `evidence-driven-testing` needs Python 3 and an ffmpeg built with libass (on macOS the default Homebrew `ffmpeg` lacks it: run `brew install ffmpeg-full` and put `$(brew --prefix ffmpeg-full)/bin` first on your `PATH`; check with `python3 .agents/skills/evidence-driven-testing/scripts/evidence.py doctor`); `before-and-after` runs `npx @vercel/before-and-after`.
 
 ## Reverse engineering with REA
 

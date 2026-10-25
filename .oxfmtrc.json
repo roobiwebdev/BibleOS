@@ -6,6 +6,8 @@
     "packages/db/migrations/**",
     "**/.next/**",
     "apps/docs/.source/**",
-    ".reference/**"
+    ".reference/**",
+    ".agents/skills/**",
+    ".claude/settings.local.json"
   ]
 }

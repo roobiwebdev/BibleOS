@@ -11,7 +11,7 @@ Every rule here is mandatory. The "why" behind each rule is in `docs/engineering
 4. **Root cause, not symptoms.** Fix problems where they originate so every caller benefits.
 5. **Finish the whole feature.** Never leave a piece half-built. If something is out of scope or blocked, say so explicitly in your handover.
 6. **Prove it.** Before handing over, run `pnpm check-types` and `pnpm lint`, plus the tests for what you touched (`pnpm test`). Report real results. Never claim a pass you did not see.
-7. **Git belongs to the user.** Suggest a branch per feature and commit points. Do not run git write commands unless asked.
+7. **Git: task branches only.** For edits, use the `new-feature` skill: one worktree and branch per task, created from `origin/main` inside the gitignored `.worktrees/` folder. Agents may create worktrees and branches, commit, and push their **own task branch**. Never commit or push to `main`, never merge, never `--force` (only `--force-with-lease` on your own branch), and open a PR only when the user asks. Read-only work (reviews, explanations, investigations) needs no worktree.
 
 ## 1. Architecture: where code goes
 
@@ -132,5 +132,29 @@ pnpm rea <command>      REA reverse-engineering CLI (also the `rea` MCP server i
 ```
 
 To study how a feature works in an existing app or binary before building our own version, use the `reverse-engineer-anything` skill with the `rea` MCP server. Rebuild the behavior in this codebase following the rules above; never copy third-party code.
+
+## 10. Workflow skills: isolate, build, prove, ship
+
+Pick the steps a task needs. A plan, review or local experiment does not imply a branch, commit or PR.
+
+| Step     | Skill                           | Starter rule                                                                                                                                                                                                                                                                            |
+| -------- | ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Plan     | `architect-feature`             | Section 0, rule 1.                                                                                                                                                                                                                                                                      |
+| Isolate  | `new-feature`                   | Section 0, rule 7. Worktrees go in `.worktrees/<task-name>`, branches are `agent/<task-name>`. Run `pnpm install` inside the worktree.                                                                                                                                                  |
+| Build    | `architect-feature` + this file | The starter's routers/services rules (section 1) replace the generic "actions vs services" advice found elsewhere.                                                                                                                                                                      |
+| Prove    | `evidence-driven-testing`       | Run `pnpm check` plus the checks for what you touched. For changed UI or runtime behavior, record the failure before the fix and the success after. Evidence goes in the gitignored `.artifacts/<task-name>/`. Playwright specs live in `apps/web/e2e/` (`pnpm --filter web test:e2e`). |
+| Ship     | `before-and-after`              | Screenshots stay local by default. Upload (the default host 0x0.st is public) only when the user asks for PR images, and never for pages showing private data.                                                                                                                          |
+| Write    | `unslop`                        | Run it over prose you write or edit for a person: commit messages, PR titles and bodies, docs, code comments. Leave text you didn't touch alone.                                                                                                                                        |
+| Research | `reverse-engineer-anything`     | See section 9.                                                                                                                                                                                                                                                                          |
+
+**Multi-agent rules**
+
+- One worktree and one branch per task and per agent. Never touch another agent's worktree, branch or uncommitted work.
+- Before starting, skim open PRs (`gh pr list`, `gh pr diff <n> --name-only`). Independent edits to the same file are fine in your own worktree. Ask when changes conflict in behavior, depend on unfinished work, or ownership is unclear.
+- Resolve `pnpm-lock.yaml` conflicts by regenerating it (`pnpm install`), never by hand-merging.
+- Worktrees do not isolate ports or databases. Confirm a dev-server port answers your process (`lsof -i :3001`) before trusting it, and never run schema experiments against a shared database.
+- If a conflict can't be resolved confidently, stop and report instead of guessing.
+
+**Shipping a task (only when asked to ship):** keep the change to the task, run the checks, commit with a clear message, rebase onto `origin/main` and re-run the checks, push your branch, then open the PR with what changed, how it was tested (each claim backed by evidence), before/after proof, and risks. Do not merge unless told to.
 
 Keep this file and `docs/engineering/` updated when you change structure, commands or conventions.

@@ -61,3 +61,7 @@ temp
 test-results
 playwright-report
 blob-report
+
+# Agent workflow (new-feature worktrees, evidence-driven-testing output)
+.worktrees/
+.artifacts/
