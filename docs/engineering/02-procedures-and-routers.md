@@ -1,6 +1,6 @@
 # Procedures and routers
 
-Every data operation is a tRPC procedure. Procedures are built from three functions in `packages/api/src/trpc.ts`. This file is the security checkpoint. Never call `initTRPC` anywhere else.
+Every data operation in the web app is a tRPC procedure (desktop study data goes through `defineCommand` instead; see [desktop.md](desktop.md)). Procedures are built from three functions in `packages/api/src/trpc.ts`. This file is the security checkpoint. Never call `initTRPC` anywhere else.
 
 ## The three builders
 

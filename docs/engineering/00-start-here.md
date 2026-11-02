@@ -1,6 +1,6 @@
 # Start here
 
-These guides explain how Project Starter is built and why. The [README](../../README.md) tells you what to run. [CLAUDE.md](../../CLAUDE.md) is the short rulebook for AI agents. These pages give the reasons behind those rules.
+These guides explain how Project Starter, the base BibleOS is built on, works and why. The desktop app has its own page, [desktop.md](desktop.md). The [README](../../README.md) tells you what to run. [CLAUDE.md](../../CLAUDE.md) is the short rulebook for AI agents. These pages give the reasons behind those rules.
 
 ## Read order
 
@@ -16,6 +16,7 @@ These guides explain how Project Starter is built and why. The [README](../../RE
 
 Reference pages, read when you need them:
 
+- [desktop.md](desktop.md): the BibleOS desktop app: local-first data, Tauri, translations, commands, testing and packaging
 - [modules.md](modules.md): the module registry, and how to switch off or remove a module
 - [database.md](database.md): Drizzle workflow, Neon, the driver, Better Auth schema
 - [customizing.md](customizing.md): branding, themes, navigation, copy
@@ -33,8 +34,8 @@ Read [01-architecture.md](01-architecture.md) for the mental model. Then read [0
 
 ## The five ideas that shape everything
 
-1. **One security checkpoint.** Every data operation is a tRPC procedure built from `packages/api/src/trpc.ts`. Rate limiting, sign-in checks, role and permission checks, transactions and audit rows happen there, once.
-2. **Env is read in one file.** `apps/web/src/server/services.ts` reads env and builds every client. Packages get what they need as arguments.
+1. **One security checkpoint.** Every web data operation is a tRPC procedure built from `packages/api/src/trpc.ts` (the desktop app uses `defineCommand` instead; see [desktop.md](desktop.md)). Rate limiting, sign-in checks, role and permission checks, transactions and audit rows happen there, once.
+2. **Env is read in one file.** `apps/web/src/server/services.ts` reads env and builds every client. The desktop app has no env. Packages get what they need as arguments.
 3. **Admins configure at runtime.** Feature toggles, site modes, branding and third-party keys live in one database row (`app_settings`), so most changes need no redeploy.
 4. **One source of truth per concern.** Grep for `SOURCE OF TRUTH KEYWORDS` before you create anything.
 5. **Modules can be switched off.** `packages/config/src/modules.ts` lists every prebuilt module, its routes and its navigation.
