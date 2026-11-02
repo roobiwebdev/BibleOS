@@ -1,0 +1,47 @@
+{
+  "name": "desktop",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tauri dev",
+    "dev:vite": "vite",
+    "build": "tauri build",
+    "build:vite": "tsc --noEmit && vite build",
+    "bibles": "pnpm --filter @starter/bible-data build:bibles --out ../../apps/desktop/src-tauri/resources/bibles && pnpm --filter @starter/bible-data export:preview --from ../../apps/desktop/src-tauri/resources/bibles --out ../../apps/desktop/public/preview-bible",
+    "tauri": "tauri",
+    "check-types": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@fontsource-variable/inter": "^5.3.0",
+    "@fontsource-variable/literata": "^5.3.0",
+    "@fontsource/noto-sans-ethiopic": "^5.3.0",
+    "@fontsource/noto-serif-ethiopic": "^5.3.0",
+    "@starter/bible-core": "workspace:*",
+    "@starter/bible-data": "workspace:*",
+    "@starter/local-api": "workspace:*",
+    "@starter/local-db": "workspace:*",
+    "@starter/ui": "workspace:*",
+    "@tanstack/react-form": "catalog:",
+    "@tanstack/react-router": "^1.170.46",
+    "@tauri-apps/api": "^2.12.4",
+    "lucide-react": "catalog:",
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "sonner": "catalog:",
+    "sql.js": "^1.15.2",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@starter/config": "workspace:*",
+    "@tailwindcss/vite": "^4.3.3",
+    "@tauri-apps/cli": "^2.12.4",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "@types/sql.js": "^1.4.11",
+    "@vitejs/plugin-react": "^6.1.2",
+    "tailwindcss": "catalog:",
+    "typescript": "catalog:",
+    "vite": "^8.3.5"
+  }
+}

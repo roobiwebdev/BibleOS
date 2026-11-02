@@ -1,0 +1,254 @@
+@import "@starter/ui/globals.css";
+@source "./**/*.{ts,tsx}";
+
+@import "@fontsource-variable/literata";
+@import "@fontsource-variable/inter";
+@import "@fontsource/noto-serif-ethiopic/400.css";
+@import "@fontsource/noto-serif-ethiopic/600.css";
+@import "@fontsource/noto-sans-ethiopic/400.css";
+@import "@fontsource/noto-sans-ethiopic/600.css";
+
+/*
+ * BibleOS reading themes. Every colour derives from these tokens; components use the
+ * shadcn token names (bg-background, text-muted-foreground, …) and never raw colours.
+ * Theme and accent are attributes (data-theme, data-accent) so a nested element can preview
+ * another theme with the same tokens, as the Settings swatches do.
+ */
+:root {
+  --radius: 0.75rem;
+  --font-sans: "Inter Variable", "Noto Sans Ethiopic", system-ui, sans-serif;
+  --reading-font: "Literata Variable", "Noto Serif Ethiopic", Georgia, serif;
+  --reading-size: 19px;
+  --reading-leading: 1.65;
+  /* Line length in em of the reading font, so it follows text size. */
+  --reading-measure: 34em;
+}
+
+[data-theme="paper"],
+[data-theme="sepia"] {
+  color-scheme: light;
+}
+[data-theme="night"] {
+  color-scheme: dark;
+}
+
+[data-theme="paper"] {
+  --background: oklch(0.982 0.008 85);
+  --foreground: oklch(0.24 0.012 60);
+  --card: oklch(0.994 0.005 85);
+  --card-foreground: oklch(0.24 0.012 60);
+  --popover: oklch(0.994 0.005 85);
+  --popover-foreground: oklch(0.24 0.012 60);
+  --primary: oklch(0.5 0.1 var(--hue));
+  --primary-foreground: oklch(0.985 0.01 85);
+  --secondary: oklch(0.95 0.012 85);
+  --secondary-foreground: oklch(0.3 0.012 60);
+  --muted: oklch(0.955 0.011 85);
+  --muted-foreground: oklch(0.5 0.014 60);
+  --accent: oklch(0.94 0.03 var(--hue));
+  --accent-foreground: oklch(0.32 0.08 var(--hue));
+  --border: oklch(0.91 0.012 80);
+  --input: oklch(0.7 0.012 80);
+  --ring: oklch(0.5 0.1 var(--hue));
+  --sidebar: oklch(0.966 0.01 85);
+  --hl-alpha: 0.6;
+  --hl-lightness: 0.85;
+  --heat-empty: oklch(0.9 0.01 85);
+}
+
+[data-theme="sepia"] {
+  --background: oklch(0.935 0.032 82);
+  --foreground: oklch(0.3 0.04 60);
+  --card: oklch(0.955 0.028 82);
+  --card-foreground: oklch(0.3 0.04 60);
+  --popover: oklch(0.955 0.028 82);
+  --popover-foreground: oklch(0.3 0.04 60);
+  --primary: oklch(0.48 0.09 var(--hue));
+  --primary-foreground: oklch(0.97 0.02 82);
+  --secondary: oklch(0.9 0.035 80);
+  --secondary-foreground: oklch(0.32 0.04 60);
+  --muted: oklch(0.905 0.032 80);
+  --muted-foreground: oklch(0.46 0.04 60);
+  --accent: oklch(0.89 0.04 var(--hue));
+  --accent-foreground: oklch(0.32 0.08 var(--hue));
+  --border: oklch(0.86 0.034 76);
+  --input: oklch(0.66 0.034 76);
+  --ring: oklch(0.48 0.09 var(--hue));
+  --sidebar: oklch(0.915 0.034 80);
+  --hl-alpha: 0.6;
+  --hl-lightness: 0.8;
+  --heat-empty: oklch(0.88 0.03 80);
+}
+
+[data-theme="night"] {
+  --background: oklch(0.17 0.004 260);
+  --foreground: oklch(0.9 0.006 85);
+  --card: oklch(0.205 0.005 260);
+  --card-foreground: oklch(0.9 0.006 85);
+  --popover: oklch(0.22 0.005 260);
+  --popover-foreground: oklch(0.9 0.006 85);
+  --primary: oklch(0.74 0.1 var(--hue));
+  --primary-foreground: oklch(0.17 0.01 260);
+  --secondary: oklch(0.25 0.006 260);
+  --secondary-foreground: oklch(0.88 0.006 85);
+  --muted: oklch(0.24 0.006 260);
+  --muted-foreground: oklch(0.66 0.01 260);
+  --accent: oklch(0.28 0.03 var(--hue));
+  --accent-foreground: oklch(0.86 0.06 var(--hue));
+  --border: oklch(0.28 0.006 260);
+  --input: oklch(0.45 0.006 260);
+  --ring: oklch(0.74 0.1 var(--hue));
+  --sidebar: oklch(0.155 0.004 260);
+  --hl-alpha: 0.32;
+  --hl-lightness: 0.6;
+  --heat-empty: oklch(0.29 0.006 260);
+}
+
+/* Accent hues. Theme blocks derive every primary token from --hue. */
+[data-accent="ink"] {
+  --hue: 255;
+}
+[data-accent="forest"] {
+  --hue: 152;
+}
+[data-accent="clay"] {
+  --hue: 45;
+}
+[data-accent="plum"] {
+  --hue: 330;
+}
+[data-accent="teal"] {
+  --hue: 195;
+}
+[data-accent="gold"] {
+  --hue: 80;
+}
+
+/* Highlight colours keep their meaning across themes; only lightness and opacity adapt. */
+[data-theme] {
+  --hl-promise: oklch(var(--hl-lightness) 0.13 85 / var(--hl-alpha));
+  --hl-command: oklch(var(--hl-lightness) 0.12 25 / var(--hl-alpha));
+  --hl-prayer: oklch(var(--hl-lightness) 0.1 250 / var(--hl-alpha));
+  --hl-insight: oklch(var(--hl-lightness) 0.12 150 / var(--hl-alpha));
+  --hl-question: oklch(var(--hl-lightness) 0.11 305 / var(--hl-alpha));
+  /* Mixed in sRGB: mixing in oklch swung the hue through teal on the way from grey to the accent. */
+  --heat-1: color-mix(in srgb, var(--primary) 30%, var(--heat-empty));
+  --heat-2: color-mix(in srgb, var(--primary) 55%, var(--heat-empty));
+  --heat-3: color-mix(in srgb, var(--primary) 80%, var(--heat-empty));
+  --heat-4: var(--primary);
+}
+
+@theme inline {
+  --color-sidebar: var(--sidebar);
+  --color-hl-promise: var(--hl-promise);
+  --color-hl-command: var(--hl-command);
+  --color-hl-prayer: var(--hl-prayer);
+  --color-hl-insight: var(--hl-insight);
+  --color-hl-question: var(--hl-question);
+  --color-heat-0: var(--heat-empty);
+  --color-heat-1: var(--heat-1);
+  --color-heat-2: var(--heat-2);
+  --color-heat-3: var(--heat-3);
+  --color-heat-4: var(--heat-4);
+  --font-reading: var(--reading-font);
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  font-family: var(--font-sans);
+  font-feature-settings: "cv11", "ss01";
+  -webkit-font-smoothing: antialiased;
+  background: var(--background);
+  color: var(--foreground);
+  transition:
+    background-color 200ms ease,
+    color 200ms ease;
+}
+
+:lang(am) {
+  font-family: "Noto Sans Ethiopic", var(--font-sans);
+}
+
+.scripture {
+  font-family: var(--reading-font);
+  font-size: var(--reading-size);
+  line-height: var(--reading-leading);
+  text-wrap: pretty;
+}
+
+/* Ethiopic glyphs are taller and denser: a touch larger with more line spacing. */
+.scripture:lang(am) {
+  font-family: "Noto Serif Ethiopic", var(--reading-font);
+  font-size: calc(var(--reading-size) * 1.1);
+  line-height: calc(var(--reading-leading) + 0.2);
+}
+
+/* The reading column: width in em of the scripture font. */
+.reading-column {
+  font-size: var(--reading-size);
+  max-width: var(--reading-measure);
+}
+
+.verse-number {
+  font-family: var(--font-sans);
+  font-size: 0.68em;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  vertical-align: 0.4em;
+  user-select: none;
+}
+
+/* Verse numbers on a highlight need more weight than muted grey to stay readable. */
+.highlighted .verse-number {
+  color: color-mix(in oklch, var(--foreground) 70%, transparent);
+}
+
+/* Small uppercase labels. Ethiopic has no case and must not be letter-spaced apart. */
+.eyebrow {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--muted-foreground);
+}
+:lang(am) .eyebrow,
+.eyebrow:lang(am) {
+  font-size: 12px;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+/* Ethiopic has no italics; never fake them. */
+:lang(am) {
+  font-synthesis: none;
+}
+:lang(am) .italic {
+  font-style: normal;
+}
+
+/* One visible focus ring for every control. Unlayered, so it wins over outline-none utilities. */
+:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

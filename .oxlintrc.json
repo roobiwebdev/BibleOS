@@ -23,6 +23,7 @@
     "**/src/env.ts",
     "**/next-env.d.ts",
     "packages/db/migrations/**",
+    "packages/local-db/migrations/**",
     "apps/docs/.source/**",
     ".reference/**"
   ]

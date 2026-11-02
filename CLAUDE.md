@@ -1,4 +1,6 @@
-# Project Starter: rules for AI coding agents
+# BibleOS: rules for AI coding agents
+
+BibleOS is a local-first macOS Bible study app (Tauri 2 + Vite + React 19, local SQLite) in `apps/desktop`. It is built on Project Starter, a Next.js + tRPC + Postgres SaaS monorepo. The web and SaaS code stays in the repo for later (a possible sync server) but is not part of the desktop build. The general rules below apply to both; the desktop-specific ones are in "Desktop app (apps/desktop)" in section 1.
 
 Every rule here is mandatory. The "why" behind each rule is in `docs/engineering/`.
 `AGENTS.md` points here so every agent reads the same rules.
@@ -25,6 +27,12 @@ packages/auth       Better Auth factory + global roles/permissions
 packages/api        tRPC: procedure builder (security checkpoint), routers, services
 packages/config     Module registry, branding, themes, shared option lists (no runtime deps)
 packages/ui         shadcn/ui primitives + theme tokens (globals.css)
+
+apps/desktop        BibleOS: Tauri 2 shell (src-tauri) + Vite React SPA (src)
+packages/bible-core Pure TS: books, verse ids, reference parser, normalize, calendar, habits, parallel, range
+packages/bible-data Build pipeline: pinned downloads → USFM parser → one read-only SQLite per translation
+packages/local-db   (planned) Drizzle SQLite schema + migrations + SQLite executor interface and adapters
+packages/local-api  (planned) defineCommand checkpoint, commands and services for study data
 ```
 
 Request flow: **UI → server action or tRPC hook → router (business logic) → service / ctx.db (data) → Postgres.**
@@ -43,6 +51,24 @@ Request flow: **UI → server action or tRPC hook → router (business logic) �
 - **Route handlers** (uploads, webhooks, auth) use `getServices()`. Keep them thin.
 - **Next 16 uses `src/proxy.ts`. Never create `middleware.ts`.**
 
+### Desktop app (apps/desktop)
+
+The web rules above cover `apps/web`, `apps/native` and the server packages. For the desktop app these rules apply instead. `packages/local-db` and `packages/local-api` are being built now; until they land, `src/lib/state/*` holds preferences and study data in memory and gets replaced by them.
+
+Request flow: **UI → TanStack Query hook (or state hook) → local-api command (`defineCommand`) → service → Drizzle (`sqlite-proxy`) → executor → driver (the app's Rust bridge, sql.js in the browser preview, node:sqlite in tests) → SQLite.**
+
+- **`defineCommand` replaces tRPC procedures for local data** and is the desktop security checkpoint. There is one local user, so auth, roles, permissions, plans and rate limits do not apply. What does apply: Zod input validation, size limits (note length, tag counts, import size), a transaction for every mutation, and a `change_log` row for every mutation. Never re-implement these in a command.
+- **The UI never imports the SQLite executor or drivers.** Only `apps/desktop/src/lib/data/*` and `local-api` touch them. In the app, SQLite is reached only through the Rust bridge in `src-tauri/src/db.rs` (`study_run`/`study_all` on one connection to `study.sqlite`, `bible_all` read-only by translation id). No SQL plugin, and the web layer never names a file path.
+- **No `.env`.** App config lives in `src-tauri/tauri.conf.json` (window, CSP, bundle) and `src-tauri/capabilities/`; user config lives in Settings (the local-api settings schema). Keep Rust to plugin wiring: no business logic in `src-tauri`.
+- **Bible text comes only through `BibleSource`** (`src/lib/bible/source.ts`). It picks the bundled SQLite store inside Tauri or the per-book preview JSON in a browser. Screens never read translation files directly.
+- **Scripture is never edited by hand.** Change it only through `packages/bible-data` with a pinned SHA-256. Licences and notices come from `packages/bible-data/src/manifest.ts` and are shown verbatim.
+- **Study data is keyed by canonical `VerseId`**, never by translation.
+- **Ethiopic/Amharic:** set `lang="am"` (or `en`) on every element that shows scripture or UI text in that language. Never fold or "fix" displayed scripture. Search folding happens only through `normalizeForSearch` from `bible-core`.
+- **i18n:** all UI copy lives in `apps/desktop/src/i18n/messages.ts` with both `en` and `am`. No hardcoded strings in components.
+- **Theme tokens** come from `apps/desktop/src/styles.css` (themes via `data-theme`, accents via `data-accent`). The section 6 token rules apply.
+
+The "why" is in `docs/engineering/desktop.md`.
+
 ## 2. Single sources of truth (grep these first)
 
 | Concern                                                         | Lives in                                                                     |
@@ -58,6 +84,12 @@ Request flow: **UI → server action or tRPC hook → router (business logic) �
 | Feedback categories and statuses                                | `packages/config/src/content.ts`                                             |
 | Env variables                                                   | `apps/web/.env.schema` (Varlock). Add new variables here first.              |
 | API input/output types for clients                              | `RouterInputs` / `RouterOutputs` from `@starter/api`                         |
+| Desktop: verse ids, books, references, calendar, habits, ranges | `packages/bible-core/src/*`                                                  |
+| Desktop: bundled translations, licences, notices                | `packages/bible-data/src/manifest.ts`                                        |
+| Desktop: themes, accents, reading tokens                        | `apps/desktop/src/styles.css`                                                |
+| Desktop: UI strings (en + am)                                   | `apps/desktop/src/i18n/messages.ts`                                          |
+| Desktop: routes and URL state                                   | `apps/desktop/src/router.tsx`                                                |
+| Desktop: preferences shape                                      | local-api settings schema (planned; today `src/lib/state/preferences.tsx`)   |
 
 ## 3. TypeScript (production grade)
 
@@ -98,6 +130,7 @@ Inline comments explain outcomes and intent, not syntax. Keep them short.
 - When importing shadcn blocks, fix their copy and branding to match the app.
 - Complex new components: ask the user for a shadcn block link to use as reference.
 - Icons: `lucide-react`.
+- Desktop: shared components go in `apps/desktop/src/components`, app chrome in `src/app`, and screen-only parts in `src/features/<screen>/`.
 
 ## 7. Database changes
 
@@ -106,6 +139,7 @@ Inline comments explain outcomes and intent, not syntax. Keep them short.
 3. Run `pnpm db:migrate` to apply it. Use `db:push` only for throwaway prototyping, never for shared databases.
 4. Better Auth tables: after changing auth plugins or `additionalFields`, run `pnpm auth:check`. It fails and lists any table or column Better Auth expects that is missing from `packages/db/src/schema`. Add them, then generate a migration.
 5. Seeds belong in `apps/web/scripts/seed.ts` and must be idempotent. This is the only allowed script for manual data changes. Ask the user before adding any other script.
+6. Desktop study data (planned) uses its own SQLite schema in `packages/local-db`, with migrations generated by `drizzle-kit` (SQLite dialect) and run by the app when it opens `study.sqlite`. Never put desktop data in the Postgres schema in `packages/db`. Translation databases are not migrated; they are rebuilt by `bible-data`.
 
 ## 8. Adding or removing a module
 
@@ -129,7 +163,15 @@ pnpm auth:check         verify the Drizzle schema has every table/column Better 
 pnpm db:generate | db:migrate | db:seed | db:reset | db:studio
 pnpm build              production build (web + docs)
 pnpm rea <command>      REA reverse-engineering CLI (also the `rea` MCP server in .mcp.json)
+
+pnpm --filter desktop dev:vite      desktop UI in the browser preview on http://localhost:1420
+pnpm --filter desktop dev           desktop app in Tauri (needs Rust via rustup)
+pnpm --filter desktop bibles        build translation DBs into src-tauri/resources/bibles + preview JSON into public/preview-bible
+pnpm --filter desktop build         Tauri production build (.app + DMG)
+pnpm --filter @starter/bible-data build:bibles   translation DBs only
 ```
+
+Run `pnpm --filter desktop bibles` once before the first desktop run; its output is gitignored. Desktop builds are unsigned: on first open, allow the app once in System Settings → Privacy & Security → Open Anyway.
 
 To study how a feature works in an existing app or binary before building our own version, use the `reverse-engineer-anything` skill with the `rea` MCP server. Rebuild the behavior in this codebase following the rules above; never copy third-party code.
 

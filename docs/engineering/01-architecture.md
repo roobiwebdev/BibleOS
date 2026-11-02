@@ -2,21 +2,28 @@
 
 ## The workspace
 
-| Folder            | Job                                                                                         | May depend on               |
-| ----------------- | ------------------------------------------------------------------------------------------- | --------------------------- |
-| `apps/web`        | Next.js 16 app: pages, layouts, route handlers, server actions. The only place env is read. | every package               |
-| `apps/native`     | Expo app. Calls the web app's `/api/auth` and `/api/trpc`.                                  | `@starter/api` (types only) |
-| `apps/docs`       | Fumadocs documentation site.                                                                | nothing in the workspace    |
-| `packages/api`    | tRPC: the procedure builder, routers, services, rate limit and audit helpers.               | auth, core, db, config      |
-| `packages/auth`   | Better Auth factory (`createAuthProvider`) and global roles / permissions.                  | core, db                    |
-| `packages/core`   | Server building blocks: settings, secrets, email, storage, payments, notify, logger.        | db                          |
-| `packages/db`     | Drizzle schema, relations, migrations, `createDb()`. Database shape only.                   | nothing in the workspace    |
-| `packages/config` | Module registry, branding, themes, option lists, base `tsconfig`. No runtime dependencies.  | nothing                     |
-| `packages/ui`     | shadcn/ui primitives and theme tokens (`src/styles/globals.css`).                           | nothing in the workspace    |
+| Folder                         | Job                                                                                         | May depend on                      |
+| ------------------------------ | ------------------------------------------------------------------------------------------- | ---------------------------------- |
+| `apps/web`                     | Next.js 16 app: pages, layouts, route handlers, server actions. The only place env is read. | every package                      |
+| `apps/native`                  | Expo app. Calls the web app's `/api/auth` and `/api/trpc`.                                  | `@starter/api` (types only)        |
+| `apps/docs`                    | Fumadocs documentation site.                                                                | nothing in the workspace           |
+| `packages/api`                 | tRPC: the procedure builder, routers, services, rate limit and audit helpers.               | auth, core, db, config             |
+| `packages/auth`                | Better Auth factory (`createAuthProvider`) and global roles / permissions.                  | core, db                           |
+| `packages/core`                | Server building blocks: settings, secrets, email, storage, payments, notify, logger.        | db                                 |
+| `packages/db`                  | Drizzle schema, relations, migrations, `createDb()`. Database shape only.                   | nothing in the workspace           |
+| `packages/config`              | Module registry, branding, themes, option lists, base `tsconfig`. No runtime dependencies.  | nothing                            |
+| `packages/ui`                  | shadcn/ui primitives and theme tokens (`src/styles/globals.css`).                           | nothing in the workspace           |
+| `apps/desktop`                 | BibleOS: Tauri 2 shell and Vite React SPA. No env. See [desktop.md](desktop.md).            | ui, config, bible-core, bible-data |
+| `packages/bible-core`          | Pure TS: books, verse ids, references, normalize, calendar, habits, parallel, ranges.       | nothing in the workspace           |
+| `packages/bible-data`          | Build pipeline that turns pinned USFM sources into one read-only SQLite per translation.    | bible-core                         |
+| `packages/local-db` (planned)  | Drizzle SQLite schema, migrations and the SQLite executor interface.                        | nothing in the workspace           |
+| `packages/local-api` (planned) | `defineCommand` checkpoint, commands and services for desktop study data.                   | local-db, bible-core               |
 
 Packages are TypeScript source (no build step). `apps/web/next.config.ts` lists them in `transpilePackages`.
 
 ## Request flow
+
+This section covers the web app. The desktop app's flow is in [desktop.md](desktop.md).
 
 ```
 Browser / Expo

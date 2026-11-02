@@ -1,4 +1,10 @@
-# Project Starter
+# BibleOS
+
+BibleOS is a local-first macOS Bible study app in `apps/desktop` (Tauri 2, Vite, React 19, local SQLite). It offers Amharic and English parallel reading, study notes and a reading-habit tracker. Everything stays on the user's Mac. See [docs/engineering/desktop.md](docs/engineering/desktop.md) and the [Desktop app](#desktop-app) commands below.
+
+It is built on Project Starter. The web and SaaS code described in the rest of this README stays in the repo but is not part of the desktop build.
+
+## Project Starter
 
 Project Starter is a production-ready monorepo for building a SaaS product. It ships the parts every product needs (sign-in, an admin panel, organizations, notifications, a blog, billing, launch modes and feedback), so you can start on the parts that make your product different. It combines three sources: the Batman Next.js boilerplate (the features), the Guardrail engineering rules (how code is written and secured), and the tarikcrafts-platform stack (Drizzle on Neon Postgres, tRPC, Better Auth, Varlock, Nx).
 
@@ -137,11 +143,26 @@ All commands run from the repository root.
 | `pnpm deploy` / `pnpm deploy:prod` / `pnpm deploy:check` | Preview deploy / production deploy / dry run                                                                                               |
 | `pnpm rea <command>`                                     | REA reverse-engineering CLI (see [Reverse engineering with REA](#reverse-engineering-with-rea))                                            |
 
+## Desktop app
+
+The desktop app needs Rust (install with `rustup`) for the Tauri commands; the browser preview does not.
+
+| Command                                          | What it does                                                                                                                        |
+| ------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm --filter desktop bibles`                   | Build the translation databases into `src-tauri/resources/bibles` and the preview JSON into `public/preview-bible`. Run once first. |
+| `pnpm --filter desktop dev:vite`                 | Desktop UI in the browser preview on http://localhost:1420                                                                          |
+| `pnpm --filter desktop dev`                      | Desktop app in Tauri                                                                                                                |
+| `pnpm --filter desktop build`                    | Production build (`.app` and DMG)                                                                                                   |
+| `pnpm --filter @starter/bible-data build:bibles` | Translation databases only                                                                                                          |
+
+Builds are unsigned (no Apple Developer Program). The first time someone opens the app, they allow it once in System Settings → Privacy & Security → Open Anyway.
+
 ## Project structure
 
 ```
 Project-Starter/
 ├── apps/
+│   ├── desktop/             BibleOS: Tauri 2 shell (src-tauri) + Vite React SPA (src)
 │   ├── web/                 Next.js app: pages, layouts, route handlers, server actions
 │   │   ├── .env.schema      every environment variable (Varlock)
 │   │   ├── scripts/seed.ts  idempotent seed
@@ -155,6 +176,8 @@ Project-Starter/
 │   ├── native/              Expo app using the same auth and tRPC API
 │   └── docs/                Fumadocs site
 ├── packages/
+│   ├── bible-core/          pure TS: books, verse ids, references, normalize, calendar, habits
+│   ├── bible-data/          pinned USFM sources → one read-only SQLite per translation
 │   ├── api/                 tRPC: procedure builder (trpc.ts), routers/, services/, lib/
 │   ├── auth/                Better Auth factory, roles and permissions
 │   ├── config/              module registry, branding, themes, option lists, base tsconfig
@@ -216,6 +239,7 @@ Only analyse software you are allowed to inspect, and rebuild features in your o
 - [docs/SETUP.md](docs/SETUP.md): from zero to a running app, with troubleshooting
 - [docs/ENVIRONMENT.md](docs/ENVIRONMENT.md): every environment variable
 - [docs/engineering/00-start-here.md](docs/engineering/00-start-here.md): how the code is organised and why (read order)
+- [docs/engineering/desktop.md](docs/engineering/desktop.md): the BibleOS desktop app and why it is built this way
 - [docs/engineering/deployment.md](docs/engineering/deployment.md): deploying to Vercel
 - [docs/engineering/security.md](docs/engineering/security.md): what the starter enforces
 - [CLAUDE.md](CLAUDE.md): the rules every AI coding agent follows
