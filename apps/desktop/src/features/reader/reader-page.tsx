@@ -7,6 +7,7 @@ import { Button } from "@starter/ui/components/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
@@ -55,7 +56,8 @@ function TranslationPicker({ value, onChange }: { value: string; onChange: (id: 
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-72">
         {(["am", "en"] as const).map((lang, i) => (
-          <div key={lang}>
+          // Base UI requires a group label to sit inside a menu group.
+          <DropdownMenuGroup key={lang}>
             {i > 0 && <DropdownMenuSeparator />}
             <DropdownMenuLabel>{lang === "am" ? "አማርኛ · Amharic" : "English"}</DropdownMenuLabel>
             {TRANSLATIONS.filter((t) => t.language === lang).map((t) => (
@@ -67,7 +69,7 @@ function TranslationPicker({ value, onChange }: { value: string; onChange: (id: 
                 {t.id === value && <Check className="size-3.5" />}
               </DropdownMenuItem>
             ))}
-          </div>
+          </DropdownMenuGroup>
         ))}
       </DropdownMenuContent>
     </DropdownMenu>
