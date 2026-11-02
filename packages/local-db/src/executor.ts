@@ -4,10 +4,10 @@
  *        (run + all on one connection); createExecutor adds get, transactions with nested
  *        savepoints, and a queue so one transaction never interleaves with other statements.
  * WHY:   The same schema, migrations and commands must run on Node (tests), Tauri
- *        (tauri-plugin-sql) and later tablet/web. Keeping the per-platform part to two methods
+ *        (the desktop's Rust bridge, sql.js in the browser preview) and later tablet/web. Keeping the per-platform part to two methods
  *        makes each adapter a few lines, and putting transaction ordering here means every
  *        platform gets the same guarantees.
- *        Rows are plain objects keyed by column name (what plugin-sql and node:sqlite return).
+ *        Rows are plain objects keyed by column name (what the Rust bridge, sql.js and node:sqlite return).
  *        Rule: a single SELECT must not return two columns with the same name (alias them),
  *        because object rows cannot hold both.
  *        Inside `transaction(fn)` use only the `tx` passed to fn; calling the outer executor

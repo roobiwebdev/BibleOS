@@ -38,6 +38,7 @@ import { HIGHLIGHT_BG } from "../../components/highlight-colors";
 import type { ChapterData, ChapterVerse } from "../../lib/bible/source";
 import { useAvailableChapters, useChapter } from "../../lib/bible/use-chapter";
 import { usePreferences, useT } from "../../lib/state/preferences";
+import { useReadingTimer } from "../../lib/state/use-reading-timer";
 import { HIGHLIGHT_COLORS, useStudy } from "../../lib/state/study-store";
 import { DEFAULT_CHAPTER, readRoute } from "../../router";
 import { ChapterPicker } from "./chapter-picker";
@@ -186,6 +187,9 @@ export function ReaderPage() {
   const toggleRail = () => (narrow ? setOverlayRail(!overlayRail) : update({ notesRail: !prefs.notesRail }));
   const [copied, setCopied] = useState(false);
   const [announcement, setAnnouncement] = useState("");
+
+  // Time on this chapter counts toward the day's reading once the text is on screen.
+  useReadingTimer(chapterId, main.id, verses.length > 0);
 
   const { markRead } = study;
   useEffect(() => {

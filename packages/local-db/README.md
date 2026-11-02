@@ -34,7 +34,7 @@ on purpose and re-check `src/drizzle.ts`. Known limits of the rc.4 proxy driver:
 ## Wiring a platform (Tauri)
 
 A platform supplies a `SqliteDriver`: `run(sql, params)` and `all(sql, params)` on **one
-connection**. For `tauri-plugin-sql`:
+connection**. The desktop app uses its own Rust bridge (`apps/desktop/src-tauri/src/db.rs`, see `apps/desktop/src/lib/data/drivers.ts`) because `tauri-plugin-sql` pools connections. A generic adapter over `tauri-plugin-sql` would look like this, with the pool caveat:
 
 ```ts
 const db = await Database.load("sqlite:study.sqlite");

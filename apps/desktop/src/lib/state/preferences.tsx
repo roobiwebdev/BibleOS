@@ -1,64 +1,27 @@
-import type { Locale } from "@starter/bible-core/books";
-import type { CalendarSystem } from "@starter/bible-core/calendar";
-import { DEFAULT_STREAK_RULES, type StreakRules } from "@starter/bible-core/habits";
+import { commands } from "@starter/local-api/api";
+import { ACCENTS, DEFAULT_PREFERENCES, LINE_WIDTH_IDS, THEME_IDS, type Preferences } from "@starter/local-api/schemas";
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 
 import { MESSAGES, type Messages } from "../../i18n/messages";
+import { callCommand } from "../data/local-api";
 
 /**
  * SOURCE OF TRUTH KEYWORDS: Preferences, usePreferences, useT, ThemeId, ACCENTS, AccentId, reading settings
  * WHAT:  The reader's preferences (theme, accent, type size, language, calendar, translations,
  *        habit rules) and their effect on the page: theme attributes, CSS variables, lang.
  * WHY:   One provider applies appearance at the document root so every screen and component
- *        follows the same tokens. In the preview it lives in memory; the backend phase stores it
- *        in the settings table with the same shape.
+ *        follows the same tokens. The shape and defaults are local-api's settings schema; values
+ *        load from the study database and every change is saved back through settings.set.
  * WHERE: every screen (useT for copy), settings page, reader, Today and Progress.
  */
-export type ThemeId = "system" | "paper" | "sepia" | "night";
+export { ACCENTS, LINE_WIDTH_IDS };
+export type { Preferences };
+export type ThemeId = (typeof THEME_IDS)[number];
+export type AccentId = (typeof ACCENTS)[number];
+export type LineWidth = (typeof LINE_WIDTH_IDS)[number];
 
 /** Reading line length, in em of the scripture font. */
-export const LINE_WIDTHS = { narrow: 30, normal: 34, wide: 40 } as const;
-export type LineWidth = keyof typeof LINE_WIDTHS;
-
-// Hues live in styles.css under [data-accent="…"].
-export const ACCENTS = ["ink", "forest", "clay", "plum", "teal", "gold"] as const;
-export type AccentId = (typeof ACCENTS)[number];
-
-export interface Preferences {
-  locale: Locale;
-  calendar: CalendarSystem;
-  theme: ThemeId;
-  accent: AccentId;
-  /** Scripture size in px. */
-  textSize: number;
-  lineSpacing: number;
-  lineWidth: LineWidth;
-  mainTranslation: string;
-  parallelTranslation: string;
-  parallel: boolean;
-  /** Hides navigation and tools so only the text remains. */
-  focusMode: boolean;
-  notesRail: boolean;
-  goalMinutes: number;
-  rules: StreakRules;
-}
-
-const DEFAULTS: Preferences = {
-  locale: "en",
-  calendar: "gregorian",
-  theme: "system",
-  accent: "ink",
-  textSize: 19,
-  lineSpacing: 1.65,
-  lineWidth: "normal",
-  mainTranslation: "en-bsb",
-  parallelTranslation: "am-1962-nt",
-  parallel: true,
-  focusMode: false,
-  notesRail: true,
-  goalMinutes: 15,
-  rules: DEFAULT_STREAK_RULES,
-};
+export const LINE_WIDTHS: Record<LineWidth, number> = { narrow: 30, normal: 34, wide: 40 };
 
 interface PreferencesContext {
   prefs: Preferences;
@@ -81,7 +44,14 @@ function useSystemDark(): boolean {
 }
 
 export function PreferencesProvider({ children }: { children: ReactNode }) {
-  const [prefs, setPrefs] = useState(DEFAULTS);
+  const [prefs, setPrefs] = useState<Preferences>(DEFAULT_PREFERENCES);
+
+  // Load saved preferences once; until then the defaults show.
+  useEffect(() => {
+    void callCommand(commands.settings.get, {})
+      .then(setPrefs)
+      .catch(() => undefined);
+  }, []);
   const systemDark = useSystemDark();
   const resolvedTheme = prefs.theme === "system" ? (systemDark ? "night" : "paper") : prefs.theme;
 
@@ -97,7 +67,17 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
   }, [prefs, resolvedTheme]);
 
   const value = useMemo(
-    () => ({ prefs, resolvedTheme, update: (patch: Partial<Preferences>) => setPrefs((p) => ({ ...p, ...patch })) }),
+    () => ({
+      prefs,
+      resolvedTheme,
+      update: (patch: Partial<Preferences>) => {
+        // Show the change at once, then save it; the saved value wins if they differ.
+        setPrefs((p) => ({ ...p, ...patch }));
+        void callCommand(commands.settings.set, patch)
+          .then(setPrefs)
+          .catch(() => undefined);
+      },
+    }),
     [prefs, resolvedTheme],
   );
   return <Context.Provider value={value}>{children}</Context.Provider>;

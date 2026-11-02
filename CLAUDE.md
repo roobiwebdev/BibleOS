@@ -55,10 +55,10 @@ Request flow: **UI → server action or tRPC hook → router (business logic) �
 
 The web rules above cover `apps/web`, `apps/native` and the server packages. For the desktop app these rules apply instead. `packages/local-db` and `packages/local-api` are being built now; until they land, `src/lib/state/*` holds preferences and study data in memory and gets replaced by them.
 
-Request flow: **UI → TanStack Query hook (or state hook) → local-api command (`defineCommand`) → service → Drizzle (`sqlite-proxy`) → executor → tauri-plugin-sql / node:sqlite → SQLite.**
+Request flow: **UI → TanStack Query hook (or state hook) → local-api command (`defineCommand`) → service → Drizzle (`sqlite-proxy`) → executor → driver (the app's Rust bridge, sql.js in the browser preview, node:sqlite in tests) → SQLite.**
 
 - **`defineCommand` replaces tRPC procedures for local data** and is the desktop security checkpoint. There is one local user, so auth, roles, permissions, plans and rate limits do not apply. What does apply: Zod input validation, size limits (note length, tag counts, import size), a transaction for every mutation, and a `change_log` row for every mutation. Never re-implement these in a command.
-- **The UI never imports the SQLite executor or `@tauri-apps/plugin-sql`.** Only `local-db` adapters and `local-api` touch them.
+- **The UI never imports the SQLite executor or drivers.** Only `apps/desktop/src/lib/data/*` and `local-api` touch them. In the app, SQLite is reached only through the Rust bridge in `src-tauri/src/db.rs` (`study_run`/`study_all` on one connection to `study.sqlite`, `bible_all` read-only by translation id). No SQL plugin, and the web layer never names a file path.
 - **No `.env`.** App config lives in `src-tauri/tauri.conf.json` (window, CSP, bundle) and `src-tauri/capabilities/`; user config lives in Settings (the local-api settings schema). Keep Rust to plugin wiring: no business logic in `src-tauri`.
 - **Bible text comes only through `BibleSource`** (`src/lib/bible/source.ts`). It picks the bundled SQLite store inside Tauri or the per-book preview JSON in a browser. Screens never read translation files directly.
 - **Scripture is never edited by hand.** Change it only through `packages/bible-data` with a pinned SHA-256. Licences and notices come from `packages/bible-data/src/manifest.ts` and are shown verbatim.
