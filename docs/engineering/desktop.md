@@ -17,7 +17,7 @@ Everything a reader creates (highlights, notes, collections, reading time) stays
 | ----------------------------- | --------------------------------------------------------------------------------------------- |
 | Small download                | Uses the system WebView (WKWebView) instead of bundling Chromium                              |
 | Reuse the React design system | The UI is a Vite + React 19 SPA; `packages/ui` has no Next.js dependency                      |
-| Local SQLite                  | `tauri-plugin-sql` with the `sqlite` feature                                                  |
+| Local SQLite                  | A small Rust bridge (`src-tauri/src/db.rs`, rusqlite with bundled SQLite)                     |
 | Tight permissions             | Capabilities (`src-tauri/capabilities/default.json`) allow only the plugins and calls we name |
 | Updates                       | `tauri-plugin-updater` with its own signing key (planned)                                     |
 | Windows and tablets later     | The same app builds for Windows, and Tauri 2 has an iOS target                                |
@@ -107,12 +107,13 @@ Why `change_log` now: it is the audit trail today and the **sync outbox** later.
 
 Drizzle's `sqlite-proxy` driver takes a small executor (`run`, `all`, `get`, `batch`). `local-db` defines that interface and ships two adapters:
 
-- **`tauri-plugin-sql`** inside the app.
+- **The Rust bridge** inside the app: one connection to `study.sqlite` (transactions are separate `BEGIN`/`COMMIT` statements and must not split across a connection pool, which is why `tauri-plugin-sql` was dropped), and read-only connections to the bundled translations, chosen by translation id so the web layer can never open another path. Rows keep their column order because Drizzle's proxy maps columns by position.
+- **sql.js** (SQLite in WebAssembly, in memory) in the browser preview, seeded with sample data through the same commands.
 - **`node:sqlite`** for Vitest and Node tools.
 
 Later platforms add their own (expo-sqlite on a tablet, wa-sqlite or sql.js in a browser). One schema and one set of commands then work everywhere.
 
-The UI must never import the executor or `@tauri-apps/plugin-sql`. If it did, a component could write without validation, a transaction or a `change_log` row. A lint rule to enforce this is planned. The current capability file already grants only `sql:allow-load`, `allow-select` and `allow-close` while the in-memory store is in use.
+The UI must never import the executor or a driver. If it did, a component could write without validation, a transaction or a `change_log` row. A lint rule to enforce this is planned. The current capability file already grants only `sql:allow-load`, `allow-select` and `allow-close` while the in-memory store is in use.
 
 Drizzle is pinned exactly because the `sqlite-proxy` driver changed between release candidates. Upgrade it on purpose, with the command tests as the gate.
 

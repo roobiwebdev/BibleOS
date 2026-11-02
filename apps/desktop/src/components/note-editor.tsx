@@ -5,7 +5,7 @@ import { useForm } from "@tanstack/react-form";
 import { z } from "zod";
 
 import { useT } from "../lib/state/preferences";
-import type { Note, VerseRange } from "../lib/state/study-store";
+import type { Note, NoteDraft, VerseRange } from "../lib/state/study-store";
 
 /**
  * SOURCE OF TRUTH KEYWORDS: NoteEditor, noteFormSchema, edit note, write note, note form, tags input
@@ -34,7 +34,7 @@ export function NoteEditor({
   /** Fixed when the editor opens, so moving to another chapter never re-anchors the draft. */
   anchors: VerseRange[];
   kind?: Note["kind"];
-  onSave: (note: Omit<Note, "id" | "createdAt" | "updatedAt"> & { id?: string }) => void;
+  onSave: (note: NoteDraft) => void;
   onCancel: () => void;
 }) {
   const t = useT();
