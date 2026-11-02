@@ -6,7 +6,7 @@ import { z } from "zod";
 /**
  * SOURCE OF TRUTH KEYWORDS: BibleSource, bibleSource, ChapterData, ChapterVerse, ChapterHeading, preview data
  * WHAT:  The one interface screens use to read scripture, and the choice of implementation:
- *        bundled SQLite files inside the desktop app, or sample chapters in the browser preview.
+ *        bundled SQLite files inside the desktop app, or per-book JSON files in the browser preview.
  * WHY:   The UI is designed and reviewed in a browser before the native app exists. Screens
  *        depend on this interface only, so switching to the real store changes no screen code.
  * WHERE: reader, parallel view, Today page, search (later).
@@ -39,7 +39,7 @@ export interface BibleSource {
 
 const EMPTY: ChapterData = { verses: [], headings: [] };
 
-// The preview file is checked once on load, so a stale export fails loudly instead of rendering wrong text.
+// Each book file is checked once on load, so a stale export fails loudly instead of rendering wrong text.
 const chapterSchema = z.object({
   verses: z.array(
     z.object({
@@ -52,21 +52,36 @@ const chapterSchema = z.object({
   ),
   headings: z.array(z.object({ vid: z.number(), level: z.enum(["s", "ms", "d", "r"]), text: z.string() })),
 });
-const sampleSchema = z.record(z.string(), z.record(z.string(), chapterSchema));
+const bookFileSchema = z.record(z.string(), chapterSchema);
 
-let sample: Promise<z.infer<typeof sampleSchema>> | undefined;
-const loadSample = () =>
-  (sample ??= import("../../preview/sample-bible.json").then((m) => sampleSchema.parse(m.default)));
+const books = new Map<string, Promise<z.infer<typeof bookFileSchema>>>();
+
+/**
+ * The browser preview reads the whole Bible from per-book JSON files exported by
+ * `pnpm --filter desktop bibles` into public/preview-bible. A missing file (the 1962 text has
+ * no Old Testament) is an empty book, not an error.
+ */
+function loadBook(translationId: string, ord: number) {
+  const key = `${translationId}/${ord}`;
+  let book = books.get(key);
+  if (!book) {
+    book = fetch(`/preview-bible/${key}.json`).then(async (response) =>
+      response.ok && response.headers.get("content-type")?.includes("json")
+        ? bookFileSchema.parse(await response.json())
+        : {},
+    );
+    books.set(key, book);
+  }
+  return book;
+}
 
 const previewSource: BibleSource = {
   async getChapter(translationId, chapterId) {
-    const data = await loadSample();
-    return data[translationId]?.[String(chapterId)] ?? EMPTY;
+    const book = await loadBook(translationId, Math.floor(chapterId / 1_000_000));
+    return book[String(chapterId)] ?? EMPTY;
   },
-  async availableChapters() {
-    const data = await loadSample();
-    return Object.keys(data["en-kjv"] ?? {}).map(Number);
-  },
+  // Every chapter is available in the preview too.
+  availableChapters: async () => undefined,
 };
 
 let chosen: Promise<BibleSource> | undefined;
