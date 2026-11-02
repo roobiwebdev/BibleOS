@@ -126,13 +126,23 @@ export function inCalendar(key: DayKey, system: CalendarSystem): CalendarDate {
   return system === "ethiopian" ? jdnToEthiopian(jdn) : jdnToGregorian(jdn);
 }
 
-/** "12 Meskerem 2016" / "መስከረም 12, 2016" / "September 12, 2023". */
+/**
+ * "12 Meskerem 2016" / "September 12, 2023" in English; in Amharic the written convention
+ * "መስከረም 12 ቀን 2016 ዓ.ም" (Ethiopian) or "… እ.ኤ.አ" (Gregorian), never a Latin comma.
+ */
 export function formatDay(key: DayKey, system: CalendarSystem, locale: Locale): string {
   const { year, month, day } = inCalendar(key, system);
   const name = monthName(system, month, locale);
-  return locale === "am"
-    ? `${name} ${day}, ${year}`
-    : system === "ethiopian"
-      ? `${day} ${name} ${year}`
-      : `${name} ${day}, ${year}`;
+  if (locale === "am") return `${name} ${day} ቀን ${year} ${system === "ethiopian" ? "ዓ.ም" : "እ.ኤ.አ"}`;
+  return system === "ethiopian" ? `${day} ${name} ${year}` : `${name} ${day}, ${year}`;
+}
+
+/** Short month label for tight spaces such as heatmap columns. */
+export function monthShort(system: CalendarSystem, month: number, locale: Locale): string {
+  if (system === "gregorian") {
+    const date = new Date(Date.UTC(2001, month - 1, 1));
+    return date.toLocaleString(locale === "am" ? "am-ET" : "en", { month: "short", timeZone: "UTC" });
+  }
+  const name = monthName(system, month, locale);
+  return locale === "am" ? name : name.slice(0, 3);
 }

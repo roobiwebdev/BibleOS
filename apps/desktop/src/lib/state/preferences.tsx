@@ -16,6 +16,10 @@ import { MESSAGES, type Messages } from "../../i18n/messages";
  */
 export type ThemeId = "system" | "paper" | "sepia" | "night";
 
+/** Reading line length, in em of the scripture font. */
+export const LINE_WIDTHS = { narrow: 30, normal: 34, wide: 40 } as const;
+export type LineWidth = keyof typeof LINE_WIDTHS;
+
 // Hues live in styles.css under [data-accent="…"].
 export const ACCENTS = ["ink", "forest", "clay", "plum", "teal", "gold"] as const;
 export type AccentId = (typeof ACCENTS)[number];
@@ -28,6 +32,7 @@ export interface Preferences {
   /** Scripture size in px. */
   textSize: number;
   lineSpacing: number;
+  lineWidth: LineWidth;
   mainTranslation: string;
   parallelTranslation: string;
   parallel: boolean;
@@ -45,6 +50,7 @@ const DEFAULTS: Preferences = {
   accent: "ink",
   textSize: 19,
   lineSpacing: 1.65,
+  lineWidth: "normal",
   mainTranslation: "en-bsb",
   parallelTranslation: "am-1962-nt",
   parallel: true,
@@ -87,6 +93,7 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
     root.dataset.accent = prefs.accent;
     root.style.setProperty("--reading-size", `${prefs.textSize}px`);
     root.style.setProperty("--reading-leading", String(prefs.lineSpacing));
+    root.style.setProperty("--reading-measure", `${LINE_WIDTHS[prefs.lineWidth]}em`);
   }, [prefs, resolvedTheme]);
 
   const value = useMemo(

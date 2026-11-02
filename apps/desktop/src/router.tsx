@@ -29,8 +29,9 @@ const indexRoute = createRoute({
 const todayRoute = createRoute({ getParentRoute: () => rootRoute, path: "/today", component: TodayPage });
 
 export const readSearch = z.object({
-  c: z.number().int().optional().catch(undefined),
-  v: z.number().int().optional().catch(undefined),
+  c: z.number().int().min(1_001_000).max(99_999_999).optional().catch(undefined),
+  // Verse numbers outside 1–176 (Psalm 119 is the longest chapter) are ignored, never crash.
+  v: z.number().int().min(1).max(176).optional().catch(undefined),
 });
 
 export const readRoute = createRoute({

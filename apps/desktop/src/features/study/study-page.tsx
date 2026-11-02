@@ -1,47 +1,52 @@
 import { normalizeForSearch } from "@starter/bible-core/normalize";
+import { formatRange, overlaps, type VerseRange } from "@starter/bible-core/range";
 import { referenceRange } from "@starter/bible-core/reference";
 import { chapterOf, splitVerseId } from "@starter/bible-core/verse-id";
+import { TRANSLATIONS } from "@starter/bible-data/manifest";
 import { Button } from "@starter/ui/components/button";
+import { Input } from "@starter/ui/components/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@starter/ui/components/tabs";
 import { cn } from "@starter/ui/lib/utils";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { ArrowUpRight, Plus, Search } from "lucide-react";
 import { useMemo, useState } from "react";
 
+import { HIGHLIGHT_BG } from "../../components/highlight-colors";
 import { linkedReferences, NoteBody } from "../../components/note-body";
 import { NoteEditor } from "../../components/note-editor";
+import { Page, PageHeader } from "../../components/page";
 import { useChapter } from "../../lib/bible/use-chapter";
+import { useFormatDate } from "../../lib/format";
 import { usePreferences, useT } from "../../lib/state/preferences";
-import {
-  HIGHLIGHT_COLORS,
-  overlaps,
-  useStudy,
-  type HighlightColor,
-  type Note,
-  type VerseRange,
-} from "../../lib/state/study-store";
+import { HIGHLIGHT_COLORS, useStudy, type HighlightColor, type Note } from "../../lib/state/study-store";
 import { studyRoute } from "../../router";
-import { rangeLabel } from "../reader/notes-rail";
 
-const SWATCH: Record<HighlightColor, string> = {
-  promise: "bg-hl-promise",
-  command: "bg-hl-command",
-  prayer: "bg-hl-prayer",
-  insight: "bg-hl-insight",
-  question: "bg-hl-question",
-};
-
-/** The text of a verse range in the reader's main translation. */
+/**
+ * SOURCE OF TRUTH KEYWORDS: PassageText, passage text, verse text for a range
+ * WHAT:  The text of a verse range in the reader's main translation, with its language set.
+ * WHY:   Study lists show the words themselves, not just references.
+ * WHERE: Study notes, highlights and collections.
+ */
 function PassageText({ range, className }: { range: VerseRange; className?: string }) {
   const { prefs } = usePreferences();
   const data = useChapter(prefs.mainTranslation, chapterOf(range.start));
+  const lang = TRANSLATIONS.find((x) => x.id === prefs.mainTranslation)?.language ?? "en";
   const text = data?.verses
-    .filter((v) => v.vid <= range.end && range.start <= v.spanEnd)
+    .filter((v) => overlaps(range, { start: v.vid, end: v.spanEnd }))
     .map((v) => v.text.replace(/\n/g, " "))
     .join(" ");
-  return <p className={cn("scripture", className)}>{text || "…"}</p>;
+  return (
+    <p lang={lang} className={cn("scripture", className)}>
+      {text || "…"}
+    </p>
+  );
 }
 
+/**
+ * SOURCE OF TRUTH KEYWORDS: PassageLink, passage chip, open passage in reader
+ * WHAT:  A small chip naming a passage in the interface language that opens it in the reader.
+ * WHERE: Study notes (anchors and linked passages), highlights, collections.
+ */
 function PassageLink({ range }: { range: VerseRange }) {
   const { prefs } = usePreferences();
   const { verse } = splitVerseId(range.start);
@@ -51,8 +56,8 @@ function PassageLink({ range }: { range: VerseRange }) {
       search={{ c: chapterOf(range.start), v: verse || undefined }}
       className="inline-flex items-center gap-0.5 rounded-md bg-muted px-1.5 py-0.5 text-[11px] font-medium text-muted-foreground hover:text-foreground"
     >
-      {rangeLabel(range, prefs.locale)}
-      <ArrowUpRight className="size-3" />
+      {formatRange(range, prefs.locale)}
+      <ArrowUpRight aria-hidden className="size-3" />
     </Link>
   );
 }
@@ -60,23 +65,33 @@ function PassageLink({ range }: { range: VerseRange }) {
 function NotesTab({ kind }: { kind: Note["kind"] }) {
   const t = useT();
   const study = useStudy();
+  const formatDate = useFormatDate();
   const search = studyRoute.useSearch();
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
   const [tag, setTag] = useState<string | null>(null);
-  const [mode, setMode] = useState<"view" | "edit" | "new">("view");
+  // Which note is being edited is pinned by id, so filtering the list can never swap it.
+  const [mode, setMode] = useState<{ kind: "view" } | { kind: "new" } | { kind: "edit"; id: string }>({ kind: "view" });
 
   const notes = useMemo(() => {
     const q = normalizeForSearch(query);
     return study.notes
       .filter((n) => n.kind === kind)
       .filter((n) => !tag || n.tags.includes(tag))
-      .filter((n) => !q || normalizeForSearch(`${n.title} ${n.body} ${n.tags.join(" ")}`).includes(q))
+      .filter((n) => {
+        if (!q) return true;
+        // Passages are searchable by name in both languages ("john 3", "ዮሐንስ").
+        const passages = n.anchors.map((a) => `${formatRange(a, "en")} ${formatRange(a, "am")}`).join(" ");
+        return normalizeForSearch(`${n.title} ${n.body} ${n.tags.join(" ")} ${passages}`).includes(q);
+      })
       .toSorted((a, b) => b.updatedAt - a.updatedAt);
   }, [study.notes, kind, tag, query]);
   const tags = [...new Set(study.notes.filter((n) => n.kind === kind).flatMap((n) => n.tags))].toSorted();
   const selected = notes.find((n) => n.id === search.note) ?? notes[0];
+  const editing = mode.kind === "edit" ? study.notes.find((n) => n.id === mode.id) : undefined;
+
   // Other notes that link to a passage this note is about.
+  const linked = selected ? linkedReferences(selected.body) : [];
   const backlinks = selected
     ? study.notes.filter(
         (n) =>
@@ -86,47 +101,57 @@ function NotesTab({ kind }: { kind: Note["kind"] }) {
     : [];
 
   return (
-    <div className="grid h-full grid-cols-[minmax(260px,320px)_1fr] gap-6">
+    <div className="grid h-full min-h-0 grid-cols-[minmax(220px,300px)_1fr] gap-6">
       <div className="flex min-h-0 flex-col gap-3">
-        <div className="relative">
-          <Search className="absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
-          <input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder={t.study.search}
-            className="h-8 w-full rounded-lg border bg-card pl-8 pr-2 text-[13px] outline-none focus:ring-2 focus:ring-ring/40"
-          />
+        <div className="flex gap-2">
+          <div className="relative flex-1">
+            <Search aria-hidden className="absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder={t.study.search}
+              aria-label={t.study.search}
+              className="h-8 pl-8 text-[13px]"
+            />
+          </div>
+          <Button size="sm" onClick={() => setMode({ kind: "new" })}>
+            <Plus /> {kind === "journal" ? t.study.newEntry : t.study.newNote}
+          </Button>
         </div>
-        <div className="flex flex-wrap gap-1.5">
-          {[null, ...tags].map((x) => (
-            <button
-              key={x ?? "all"}
-              type="button"
-              onClick={() => setTag(x)}
-              className={cn(
-                "rounded-full border px-2.5 py-0.5 text-xs transition-colors",
-                tag === x
-                  ? "border-primary bg-primary text-primary-foreground"
-                  : "bg-card text-muted-foreground hover:text-foreground",
-              )}
-            >
-              {x ? `#${x}` : t.study.allTags}
-            </button>
-          ))}
-        </div>
+        {tags.length > 0 && (
+          <div className="flex flex-wrap gap-1.5" role="group" aria-label={t.notes.tags}>
+            {[null, ...tags].map((x) => (
+              <button
+                key={x ?? "all"}
+                type="button"
+                aria-pressed={tag === x}
+                onClick={() => setTag(tag === x ? null : x)}
+                className={cn(
+                  "rounded-full border px-2.5 py-0.5 text-xs transition-colors",
+                  tag === x
+                    ? "border-primary bg-primary text-primary-foreground"
+                    : "bg-card text-muted-foreground hover:text-foreground",
+                )}
+              >
+                {x ? `#${x}` : t.study.allTags}
+              </button>
+            ))}
+          </div>
+        )}
         <div className="-mx-1 flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto px-1">
           {notes.length === 0 && <p className="py-8 text-center text-sm text-muted-foreground">{t.study.empty}</p>}
           {notes.map((n) => (
             <button
               key={n.id}
               type="button"
+              aria-current={selected?.id === n.id ? "true" : undefined}
               onClick={() => {
-                setMode("view");
+                setMode({ kind: "view" });
                 void navigate({ to: "/study", search: { tab: kind === "journal" ? "journal" : "notes", note: n.id } });
               }}
               className={cn(
                 "rounded-xl border p-3 text-left transition-colors",
-                selected?.id === n.id && mode !== "new"
+                selected?.id === n.id && mode.kind === "view"
                   ? "border-primary/40 bg-accent/60"
                   : "border-transparent hover:bg-muted",
               )}
@@ -135,8 +160,8 @@ function NotesTab({ kind }: { kind: Note["kind"] }) {
               <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">
                 {n.body.replace(/\[\[([^\]]+)\]\]/g, "$1")}
               </p>
-              <p className="mt-1.5 text-[11px] text-muted-foreground/80">
-                {new Date(n.updatedAt).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
+              <p className="mt-1.5 text-[11px] text-muted-foreground">
+                {formatDate(n.updatedAt)}
                 {n.tags.length > 0 && <span className="ml-2 text-primary">{n.tags.map((x) => `#${x}`).join(" ")}</span>}
               </p>
             </button>
@@ -145,37 +170,39 @@ function NotesTab({ kind }: { kind: Note["kind"] }) {
       </div>
 
       <div className="min-h-0 overflow-y-auto">
-        {mode === "new" ? (
+        {mode.kind === "new" ? (
           <NoteEditor
             kind={kind}
             anchors={[]}
             onSave={(n) => {
               study.saveNote(n);
-              setMode("view");
+              setMode({ kind: "view" });
             }}
-            onCancel={() => setMode("view")}
+            onCancel={() => setMode({ kind: "view" })}
           />
-        ) : selected && mode === "edit" ? (
+        ) : editing ? (
           <NoteEditor
-            note={selected}
-            anchors={selected.anchors}
+            key={editing.id}
+            note={editing}
+            anchors={editing.anchors}
             onSave={(n) => {
               study.saveNote(n);
-              setMode("view");
+              setMode({ kind: "view" });
             }}
-            onCancel={() => setMode("view")}
+            onCancel={() => setMode({ kind: "view" })}
           />
         ) : selected ? (
           <article className="rounded-2xl border bg-card p-8 shadow-xs">
             <div className="flex items-start justify-between gap-4">
               <h2 className="text-2xl font-semibold tracking-tight">{selected.title}</h2>
-              <Button variant="outline" size="sm" onClick={() => setMode("edit")}>
-                {t.notes.edited}
+              <Button variant="outline" size="sm" onClick={() => setMode({ kind: "edit", id: selected.id })}>
+                {t.notes.edit}
               </Button>
             </div>
-            <div className="mt-2 flex flex-wrap gap-1.5">
+            <p className="mt-1 text-xs text-muted-foreground">{formatDate(selected.updatedAt)}</p>
+            <div className="mt-3 flex flex-wrap gap-1.5">
               {selected.anchors.map((a) => (
-                <PassageLink key={a.start} range={a} />
+                <PassageLink key={`${a.start}-${a.end}`} range={a} />
               ))}
               {selected.tags.map((x) => (
                 <span key={x} className="text-xs text-primary">
@@ -185,39 +212,29 @@ function NotesTab({ kind }: { kind: Note["kind"] }) {
             </div>
             {selected.anchors[0] && (
               <div className="mt-6 border-l-2 border-primary/40 pl-4">
-                <PassageText range={selected.anchors[0]} className="text-[0.95em] text-foreground/80" />
+                <PassageText range={selected.anchors[0]} className="text-[0.95em] text-foreground/85" />
               </div>
             )}
             <div className="mt-6 text-[15px] leading-relaxed">
               <NoteBody body={selected.body} />
             </div>
-            {linkedReferences(selected.body).length > 0 && (
+            {linked.length > 0 && (
               <div className="mt-8 border-t pt-5">
-                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  {t.notes.linked}
-                </p>
+                <h3 className="eyebrow mb-2">{t.notes.linked}</h3>
                 <div className="flex flex-wrap gap-1.5">
-                  {linkedReferences(selected.body).map((r) => (
-                    <span
-                      key={`${r.book.code}${r.chapter}${r.verse ?? ""}`}
-                      className="rounded-md bg-accent px-2 py-0.5 text-xs text-accent-foreground"
-                    >
-                      {r.book.en.short} {r.chapter}
-                      {r.verse ? `:${r.verse}` : ""}
-                    </span>
+                  {linked.map((r, i) => (
+                    <PassageLink key={i} range={referenceRange(r)} />
                   ))}
                 </div>
               </div>
             )}
             {backlinks.length > 0 && (
               <div className="mt-6">
-                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  {t.notes.backlinks}
-                </p>
+                <h3 className="eyebrow mb-2">{t.notes.backlinks}</h3>
                 {backlinks.map((b) => (
-                  <p key={b.id} className="text-sm">
+                  <Link key={b.id} to="/study" search={{ note: b.id }} className="block text-sm hover:underline">
                     {b.title}
-                  </p>
+                  </Link>
                 ))}
               </div>
             )}
@@ -226,10 +243,6 @@ function NotesTab({ kind }: { kind: Note["kind"] }) {
           <p className="pt-20 text-center text-sm text-muted-foreground">{t.study.empty}</p>
         )}
       </div>
-
-      <Button className="absolute right-10 top-[3.25rem]" size="sm" onClick={() => setMode("new")}>
-        <Plus /> {t.study.newNote}
-      </Button>
     </div>
   );
 }
@@ -239,11 +252,14 @@ function HighlightsTab() {
   const study = useStudy();
   const [color, setColor] = useState<HighlightColor | null>(null);
   const list = study.highlights.filter((h) => !color || h.color === color).toSorted((a, b) => a.start - b.start);
+  if (study.highlights.length === 0)
+    return <p className="pt-16 text-center text-sm text-muted-foreground">{t.study.emptyHighlights}</p>;
   return (
-    <div className="mx-auto max-w-3xl">
-      <div className="mb-5 flex flex-wrap gap-2">
+    <div className="max-w-3xl">
+      <div className="mb-5 flex flex-wrap gap-2" role="group" aria-label={t.study.highlights}>
         <button
           type="button"
+          aria-pressed={color === null}
           onClick={() => setColor(null)}
           className={cn(
             "rounded-full border px-3 py-1 text-xs",
@@ -256,13 +272,14 @@ function HighlightsTab() {
           <button
             key={c}
             type="button"
-            onClick={() => setColor(c)}
+            aria-pressed={color === c}
+            onClick={() => setColor(color === c ? null : c)}
             className={cn(
               "flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs",
               color === c ? "border-primary" : "bg-card",
             )}
           >
-            <span className={cn("size-2.5 rounded-full", SWATCH[c])} />
+            <span aria-hidden className={cn("size-2.5 rounded-full", HIGHLIGHT_BG[c])} />
             {t.colors[c]}{" "}
             <span className="text-muted-foreground">{study.highlights.filter((h) => h.color === c).length}</span>
           </button>
@@ -271,7 +288,7 @@ function HighlightsTab() {
       <div className="flex flex-col gap-3">
         {list.map((h) => (
           <div key={h.id} className="flex gap-4 rounded-xl border bg-card p-4">
-            <span className={cn("w-1 shrink-0 rounded-full", SWATCH[h.color])} />
+            <span aria-hidden className={cn("w-1 shrink-0 rounded-full", HIGHLIGHT_BG[h.color])} />
             <div className="min-w-0 flex-1">
               <div className="mb-1.5 flex items-center gap-2">
                 <PassageLink range={h} />
@@ -289,8 +306,10 @@ function HighlightsTab() {
 function CollectionsTab() {
   const t = useT();
   const study = useStudy();
+  if (study.collections.length === 0)
+    return <p className="pt-16 text-center text-sm text-muted-foreground">{t.study.emptyCollections}</p>;
   return (
-    <div className="grid grid-cols-2 gap-5">
+    <div className="grid grid-cols-1 gap-5 @3xl:grid-cols-2">
       {study.collections.map((c) => (
         <section key={c.id} className="rounded-2xl border bg-card p-5 shadow-xs">
           <div className="mb-4 flex items-baseline justify-between">
@@ -298,10 +317,11 @@ function CollectionsTab() {
             <span className="text-xs text-muted-foreground">{t.study.items(c.items.length)}</span>
           </div>
           <div className="flex flex-col gap-4">
+            {c.items.length === 0 && <p className="text-sm text-muted-foreground">{t.study.emptyCollections}</p>}
             {c.items.map((item) => (
               <div key={`${item.start}-${item.end}`}>
                 <PassageLink range={item} />
-                <PassageText range={item} className="mt-1.5 line-clamp-3 text-[0.9em] text-foreground/80" />
+                <PassageText range={item} className="mt-1.5 line-clamp-3 text-[0.9em] text-foreground/85" />
               </div>
             ))}
           </div>
@@ -311,32 +331,34 @@ function CollectionsTab() {
   );
 }
 
+const TABS = ["notes", "highlights", "collections", "journal"] as const;
+
 export function StudyPage() {
   const t = useT();
   const search = studyRoute.useSearch();
   const navigate = useNavigate();
   const tab = search.tab ?? "notes";
   return (
-    <div className="relative flex h-full flex-col">
-      <div data-tauri-drag-region className="h-11 shrink-0" />
+    <Page scroll={false}>
       <Tabs
         value={tab}
         onValueChange={(value) => {
-          if (value === "notes" || value === "highlights" || value === "collections" || value === "journal") {
-            void navigate({ to: "/study", search: { tab: value } });
-          }
+          const next = TABS.find((x) => x === value);
+          if (next) void navigate({ to: "/study", search: { tab: next } });
         }}
-        className="flex min-h-0 flex-1 flex-col px-10 pb-8"
+        className="flex min-h-0 flex-1 flex-col"
       >
-        <div className="mb-6 flex items-center gap-6">
-          <h1 className="text-3xl font-semibold tracking-tight">{t.study.title}</h1>
-          <TabsList>
-            <TabsTrigger value="notes">{t.study.notes}</TabsTrigger>
-            <TabsTrigger value="highlights">{t.study.highlights}</TabsTrigger>
-            <TabsTrigger value="collections">{t.study.collections}</TabsTrigger>
-            <TabsTrigger value="journal">{t.study.journal}</TabsTrigger>
-          </TabsList>
-        </div>
+        <PageHeader
+          title={t.study.title}
+          actions={
+            <TabsList>
+              <TabsTrigger value="notes">{t.study.notes}</TabsTrigger>
+              <TabsTrigger value="highlights">{t.study.highlights}</TabsTrigger>
+              <TabsTrigger value="collections">{t.study.collections}</TabsTrigger>
+              <TabsTrigger value="journal">{t.study.journal}</TabsTrigger>
+            </TabsList>
+          }
+        />
         <TabsContent value="notes" className="min-h-0 flex-1">
           <NotesTab kind="note" />
         </TabsContent>
@@ -350,6 +372,6 @@ export function StudyPage() {
           <CollectionsTab />
         </TabsContent>
       </Tabs>
-    </div>
+    </Page>
   );
 }

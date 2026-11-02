@@ -37,7 +37,7 @@ describe("Ethiopian calendar", () => {
   it("knows weekdays and formats days", () => {
     expect(weekday("2023-09-12")).toBe(2); // Tuesday
     expect(addDays("2024-02-28", 1)).toBe("2024-02-29");
-    expect(formatDay("2024-09-11", "ethiopian", "am")).toBe("መስከረም 1, 2017");
+    expect(formatDay("2024-09-11", "ethiopian", "am")).toBe("መስከረም 1 ቀን 2017 ዓ.ም");
     expect(formatDay("2024-09-11", "ethiopian", "en")).toBe("1 Meskerem 2017");
   });
 });
