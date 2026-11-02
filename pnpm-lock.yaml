@@ -765,6 +765,34 @@ importers:
         specifier: 'catalog:'
         version: 1.23.0
 
+  packages/local-api:
+    dependencies:
+      '@starter/bible-core':
+        specifier: workspace:*
+        version: link:../bible-core
+      '@starter/local-db':
+        specifier: workspace:*
+        version: link:../local-db
+      drizzle-orm:
+        specifier: 'catalog:'
+        version: 1.0.0-rc.4(@types/pg@8.23.1)(pg@8.23.1)(zod@4.6.7)
+      zod:
+        specifier: 'catalog:'
+        version: 4.6.7
+    devDependencies:
+      '@starter/config':
+        specifier: workspace:*
+        version: link:../config
+      '@types/node':
+        specifier: 'catalog:'
+        version: 26.6.5
+      typescript:
+        specifier: 'catalog:'
+        version: 6.0.3
+      vitest:
+        specifier: 'catalog:'
+        version: 3.2.7(@types/debug@4.1.13)(@types/node@26.6.5)(jiti@2.7.0)(jsdom@28.1.0(@noble/hashes@2.4.0)(supports-color@8.1.1))(lightningcss@1.33.0)(supports-color@8.1.1)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.1)
+
   packages/local-db:
     dependencies:
       drizzle-orm:
