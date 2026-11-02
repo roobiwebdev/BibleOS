@@ -4,6 +4,7 @@
     "pnpm-lock.yaml",
     "**/src/env.ts",
     "packages/db/migrations/**",
+    "packages/local-db/migrations/**",
     "**/.next/**",
     "apps/docs/.source/**",
     ".reference/**",
