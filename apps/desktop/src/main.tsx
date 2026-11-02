@@ -1,6 +1,7 @@
 import "./styles.css";
 
 import { TooltipProvider } from "@starter/ui/components/tooltip";
+import { Toaster } from "sonner";
 import { RouterProvider } from "@tanstack/react-router";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
@@ -17,6 +18,10 @@ if (root) {
         <StudyProvider>
           <TooltipProvider delayDuration={400}>
             <RouterProvider router={router} />
+            <Toaster
+              position="bottom-center"
+              toastOptions={{ className: "!bg-popover !text-popover-foreground !border-border !rounded-xl" }}
+            />
           </TooltipProvider>
         </StudyProvider>
       </PreferencesProvider>

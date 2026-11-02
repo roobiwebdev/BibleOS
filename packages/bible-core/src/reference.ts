@@ -81,7 +81,19 @@ function editDistance(a: string, b: string): number {
  * WHY:   Shared by the parser and the palette's live suggestions so both agree.
  * WHERE: parseReference, desktop ⌘K palette and book picker filter.
  */
+const matchCache = new Map<string, BookInfo[]>();
+
 export function matchBooks(input: string, limit = 5): BookInfo[] {
+  const cacheKey = `${limit}|${input}`;
+  const cached = matchCache.get(cacheKey);
+  if (cached) return cached;
+  const result = rankBooks(input, limit);
+  if (matchCache.size > 500) matchCache.clear();
+  matchCache.set(cacheKey, result);
+  return result;
+}
+
+function rankBooks(input: string, limit: number): BookInfo[] {
   const key = keyOf(input);
   if (key.length === 0) return [];
   // Ties prefer names whose length matches the input: "jhon" is a swap of "john", not a cut of "jon".
@@ -98,6 +110,8 @@ export function matchBooks(input: string, limit = 5): BookInfo[] {
     else if (key.length >= 2 && candidate.startsWith(key)) offer(book, 1, candidate);
     else if (key.length >= 4) {
       const allowed = key.length >= 7 ? 2 : 1;
+      // Lengths further apart than the allowed edits can never match; skip the distance work.
+      if (Math.abs([...candidate].length - [...key].length) > allowed) continue;
       const distance = editDistance(key, candidate);
       if (distance <= allowed) offer(book, 1 + distance, candidate);
     }
@@ -112,6 +126,9 @@ const SEP = "\\s*[:.፥፡]\\s*";
 const DASH = "\\s*[-–—]\\s*";
 const REFERENCE = new RegExp(`^(.*?)\\s*(\\d+)(?:${SEP}(\\d+))?(?:${DASH}(\\d+)(?:${SEP}(\\d+))?)?\\s*$`, "u");
 
+/** No chapter in the Bible has more verses than Psalm 119 (176). */
+export const MAX_VERSE = 176;
+
 export function parseReference(input: string): ParsedReference | undefined {
   const text = input.trim();
   const match = REFERENCE.exec(text);
@@ -120,11 +137,18 @@ export function parseReference(input: string): ParsedReference | undefined {
   if (!book) return undefined;
   if (!match) return { book, chapter: 1 };
 
-  const chapter = Number(match[2]);
-  const verse = match[3] === undefined ? undefined : Number(match[3]);
+  let chapter = Number(match[2]);
+  let verse = match[3] === undefined ? undefined : Number(match[3]);
   const rangeA = match[4] === undefined ? undefined : Number(match[4]);
   const rangeB = match[5] === undefined ? undefined : Number(match[5]);
+  // One-chapter books are cited by verse alone: "Jude 5" means Jude 1:5.
+  if (book.chapters === 1 && verse === undefined && rangeB === undefined) {
+    verse = chapter;
+    chapter = 1;
+  }
   if (chapter < 1 || chapter > book.chapters) return undefined;
+  const verseOk = (v: number | undefined) => v === undefined || (v >= 1 && v <= MAX_VERSE);
+  if (!verseOk(verse) || !verseOk(rangeB)) return undefined;
 
   const ref: ParsedReference = { book, chapter };
   if (verse !== undefined) ref.verse = verse;
@@ -139,6 +163,7 @@ export function parseReference(input: string): ParsedReference | undefined {
       ref.endChapter = rangeA; // "Gen 1-3"
     }
   }
+  if (ref.endVerse !== undefined && ref.endVerse > MAX_VERSE) return undefined;
   if (ref.endChapter !== undefined && (ref.endChapter < chapter || ref.endChapter > book.chapters)) {
     return undefined;
   }

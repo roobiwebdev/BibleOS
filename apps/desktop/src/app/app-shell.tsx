@@ -1,5 +1,5 @@
 import { cn } from "@starter/ui/lib/utils";
-import { Link, Outlet } from "@tanstack/react-router";
+import { Link, Outlet, useRouterState } from "@tanstack/react-router";
 import { BookOpen, ChartNoAxesColumn, NotebookPen, Search, Settings, Sun } from "lucide-react";
 import { useEffect, useState } from "react";
 
@@ -21,6 +21,9 @@ export function AppShell() {
   const { prefs } = usePreferences();
   const habits = useHabits();
   const [paletteOpen, setPaletteOpen] = useState(false);
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  // Focus mode belongs to the reader; every other screen keeps its navigation.
+  const focus = prefs.focusMode && pathname.startsWith("/read");
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -38,8 +41,9 @@ export function AppShell() {
       <aside
         className={cn(
           "flex w-56 shrink-0 flex-col border-r bg-sidebar transition-[margin] duration-300",
-          prefs.focusMode && "-ml-56",
+          focus && "-ml-56",
         )}
+        inert={focus}
       >
         <div data-tauri-drag-region className="h-11 shrink-0" />
         <div className="px-4 pb-4">
@@ -86,7 +90,7 @@ export function AppShell() {
                 {t.today.thisWeek}
               </span>
               <span className="tabular text-[11px] text-muted-foreground">
-                {habits.todayMinutes}/{prefs.goalMinutes}′
+                {habits.todayMinutes}/{prefs.goalMinutes} min
               </span>
             </div>
             <WeekDots dots={habits.dots} size="sm" />
@@ -105,7 +109,8 @@ export function AppShell() {
         </div>
       </aside>
 
-      <main className="relative min-w-0 flex-1 overflow-hidden">
+      {/* overflow-clip, not hidden: scrollIntoView must never scroll the app frame itself. */}
+      <main className="relative min-w-0 flex-1 overflow-clip">
         <Outlet />
       </main>
 

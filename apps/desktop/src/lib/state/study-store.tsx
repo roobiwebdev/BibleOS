@@ -1,6 +1,7 @@
 import { addDays, dayKeyOf, type DayKey } from "@starter/bible-core/calendar";
 import type { SessionLike } from "@starter/bible-core/habits";
 import { BOOKS } from "@starter/bible-core/books";
+import { overlaps, subtractRange, type VerseRange } from "@starter/bible-core/range";
 import { chapterOf, makeVerseId, verseIdFromCode, type VerseId } from "@starter/bible-core/verse-id";
 import { createContext, useContext, useMemo, useState, type ReactNode } from "react";
 
@@ -16,10 +17,7 @@ import { createContext, useContext, useMemo, useState, type ReactNode } from "re
 export const HIGHLIGHT_COLORS = ["promise", "command", "prayer", "insight", "question"] as const;
 export type HighlightColor = (typeof HIGHLIGHT_COLORS)[number];
 
-export interface VerseRange {
-  start: VerseId;
-  end: VerseId;
-}
+export type { VerseRange };
 
 export interface Highlight extends VerseRange {
   id: string;
@@ -61,8 +59,10 @@ interface StudyContext extends StudyState {
   setHighlight: (range: VerseRange, color: HighlightColor) => void;
   removeHighlight: (range: VerseRange) => void;
   saveNote: (note: Omit<Note, "id" | "createdAt" | "updatedAt"> & { id?: string }) => void;
-  deleteNote: (id: string) => void;
+  /** Removes a note and returns a function that puts it back (for Undo). */
+  deleteNote: (id: string) => () => void;
   addToCollection: (collectionId: string, range: VerseRange) => void;
+  createCollection: (name: string, first?: VerseRange) => void;
   markRead: (chapterId: VerseId) => void;
 }
 
@@ -199,7 +199,13 @@ function sampleState(): StudyState {
   };
 }
 
-const overlaps = (a: VerseRange, b: VerseRange) => a.start <= b.end && b.start <= a.end;
+/** Cuts `range` out of every highlight, keeping the parts before and after it. */
+const cutHighlights = (highlights: Highlight[], cut: VerseRange): Highlight[] =>
+  highlights.flatMap((h) =>
+    overlaps(h, cut)
+      ? subtractRange(h, cut).map((piece, i) => ({ ...h, ...piece, id: i === 0 ? h.id : newId() }))
+      : [h],
+  );
 
 const Context = createContext<StudyContext | null>(null);
 
@@ -212,12 +218,9 @@ export function StudyProvider({ children }: { children: ReactNode }) {
       setHighlight: (r, color) =>
         setState((s) => ({
           ...s,
-          highlights: [
-            ...s.highlights.filter((h) => !overlaps(h, r)),
-            { id: newId(), ...r, color, createdAt: Date.now() },
-          ],
+          highlights: [...cutHighlights(s.highlights, r), { id: newId(), ...r, color, createdAt: Date.now() }],
         })),
-      removeHighlight: (r) => setState((s) => ({ ...s, highlights: s.highlights.filter((h) => !overlaps(h, r)) })),
+      removeHighlight: (r) => setState((s) => ({ ...s, highlights: cutHighlights(s.highlights, r) })),
       saveNote: (input) =>
         setState((s) => {
           const now = Date.now();
@@ -230,7 +233,18 @@ export function StudyProvider({ children }: { children: ReactNode }) {
           };
           return { ...s, notes: [note, ...s.notes.filter((n) => n.id !== note.id)] };
         }),
-      deleteNote: (id) => setState((s) => ({ ...s, notes: s.notes.filter((n) => n.id !== id) })),
+      deleteNote: (id) => {
+        let removed: Note | undefined;
+        setState((s) => {
+          removed = s.notes.find((n) => n.id === id);
+          return { ...s, notes: s.notes.filter((n) => n.id !== id) };
+        });
+        return () =>
+          setState((s) => {
+            const note = removed;
+            return note && !s.notes.some((n) => n.id === note.id) ? { ...s, notes: [note, ...s.notes] } : s;
+          });
+      },
       addToCollection: (collectionId, r) =>
         setState((s) => ({
           ...s,
@@ -239,6 +253,11 @@ export function StudyProvider({ children }: { children: ReactNode }) {
               ? { ...c, items: [...c.items, r] }
               : c,
           ),
+        })),
+      createCollection: (name, first) =>
+        setState((s) => ({
+          ...s,
+          collections: [...s.collections, { id: newId(), name, items: first ? [first] : [] }],
         })),
       markRead: (chapterId) =>
         setState((s) => {

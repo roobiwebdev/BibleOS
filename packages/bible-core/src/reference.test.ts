@@ -37,8 +37,16 @@ describe("parseReference", () => {
     expect(parseReference("Ruth")).toMatchObject({ chapter: 1 });
   });
 
+  it("reads one-chapter books by verse", () => {
+    expect(parseReference("Jude 5")).toMatchObject({ chapter: 1, verse: 5 });
+    expect(parseReference("Obad 3-4")).toMatchObject({ chapter: 1, verse: 3, endVerse: 4 });
+    expect(parseReference("Philemon 1:4")).toMatchObject({ chapter: 1, verse: 4 });
+  });
+
   it("rejects impossible references", () => {
-    expect(parseReference("Jude 2")).toBeUndefined();
+    expect(parseReference("John 3:1000")).toBeUndefined();
+    expect(parseReference("John 3:16-900")).toBeUndefined();
+    expect(parseReference("Jude 2:1")).toBeUndefined();
     expect(parseReference("John 3:18-16")).toBeUndefined();
     expect(parseReference("Xyzzy 1")).toBeUndefined();
   });
@@ -46,6 +54,8 @@ describe("parseReference", () => {
   it("formats per locale", () => {
     const ref = parseReference("jn 3:16-18");
     expect(ref && formatReference(ref, "en")).toBe("John 3:16–18");
+    const psalm = parseReference("ps 23");
+    expect(psalm && formatReference(psalm, "en")).toBe("Psalm 23");
     expect(ref && formatReference(ref, "am")).toBe("ዮሐንስ 3፥16–18");
   });
 
