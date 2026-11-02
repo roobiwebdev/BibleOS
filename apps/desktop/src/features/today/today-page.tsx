@@ -18,7 +18,7 @@ import { usePreferences, useT } from "../../lib/state/preferences";
 import { useStudy } from "../../lib/state/study-store";
 import { useHabits } from "../../lib/state/use-habits";
 
-// Curated verses of the day. The preview rotates through verses in its sample chapters.
+// Curated verses of the day, rotating daily.
 const VERSES_OF_THE_DAY = [
   ["JHN", 3, 16],
   ["PSA", 23, 1],

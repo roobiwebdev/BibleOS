@@ -9,7 +9,8 @@
   "scripts": {
     "build:bibles": "tsx src/build.ts",
     "check-types": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "export:preview": "tsx src/export-preview.ts"
   },
   "dependencies": {
     "@starter/bible-core": "workspace:*",
