@@ -18,9 +18,12 @@ import {
 import { createSelectSchema } from "drizzle-orm/zod";
 import { z } from "zod";
 
+import { PLAN_KEYS } from "@starter/bible-core/plans";
+
 import { CommandError, defineCommand } from "../command";
 import { dayKeySchema, highlightColorSchema, LIMITS, noteKindSchema } from "../schemas";
 import * as backupService from "../services/backup";
+import { CUSTOM_PLAN_KEY, planDefinitionSchema } from "./plans";
 
 export const BACKUP_FORMAT = "bibleos-study-backup";
 export const BACKUP_VERSION = 1;
@@ -115,6 +118,18 @@ function assertReferences(data: StudyBackup["data"]): void {
     data.noteLinks.some((l) => !noteIds.has(l.fromNoteId)) ||
     data.collectionItems.some((i) => !collectionIds.has(i.collectionId)) ||
     data.planProgress.some((p) => !planIds.has(p.planId));
+  // A plan is either a known built-in plan or a custom plan with a valid definition.
+  const knownKeys = new Set<string>([...PLAN_KEYS, CUSTOM_PLAN_KEY]);
+  const badPlan = data.plans.some((p) => {
+    if (!knownKeys.has(p.planKey)) return true;
+    if (p.definition === null) return p.planKey === CUSTOM_PLAN_KEY;
+    try {
+      return !planDefinitionSchema.safeParse(JSON.parse(p.definition)).success;
+    } catch {
+      return true;
+    }
+  });
+  if (badPlan) throw new CommandError("INVALID_INPUT", "The backup file has a reading plan this version can't read.");
   if (orphan)
     throw new CommandError(
       "INVALID_INPUT",
