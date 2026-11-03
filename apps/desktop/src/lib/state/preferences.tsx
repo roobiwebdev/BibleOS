@@ -4,6 +4,7 @@ import { createContext, useContext, useEffect, useMemo, useState, type ReactNode
 
 import { MESSAGES, type Messages } from "../../i18n/messages";
 import { callCommand } from "../data/local-api";
+import { setDockIcon } from "../native";
 
 /**
  * SOURCE OF TRUTH KEYWORDS: Preferences, usePreferences, useT, ThemeId, ACCENTS, AccentId, reading settings
@@ -58,6 +59,7 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const root = document.documentElement;
     root.dataset.theme = resolvedTheme;
+    setDockIcon(resolvedTheme);
     root.classList.toggle("dark", resolvedTheme === "night");
     root.lang = prefs.locale;
     root.dataset.accent = prefs.accent;

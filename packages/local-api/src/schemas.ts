@@ -100,7 +100,8 @@ export const preferencesPatchSchema = preferencesSchema.partial().strict();
 export const DEFAULT_PREFERENCES: Preferences = {
   locale: "en",
   calendar: "gregorian",
-  theme: "system",
+  // Warm sepia paper is the house look; "system" (follow macOS light/dark) stays a choice.
+  theme: "sepia",
   accent: "ink",
   textSize: 19,
   lineSpacing: 1.65,
