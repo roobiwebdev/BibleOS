@@ -1,5 +1,10 @@
 import type { Locale } from "@starter/bible-core/books";
 
+import { historyMessages } from "./sections/history";
+import { plansMessages } from "./sections/plans";
+import { searchMessages } from "./sections/search";
+import { welcomeMessages } from "./sections/welcome";
+
 /**
  * SOURCE OF TRUTH KEYWORDS: messages, Messages, UI strings, i18n, English, Amharic, translations of the interface
  * WHAT:  Every interface string in English and Amharic. Amharic must match the English shape,
@@ -9,7 +14,19 @@ import type { Locale } from "@starter/bible-core/books";
  * WHERE: useT() in every screen. Moves to packages/i18n once a second app needs it.
  */
 const en = {
-  nav: { today: "Today", read: "Read", study: "Study", progress: "Progress", settings: "Settings" },
+  nav: {
+    today: "Today",
+    read: "Read",
+    plans: "Plans",
+    study: "Study",
+    history: "History",
+    progress: "Progress",
+    settings: "Settings",
+  },
+  plans: plansMessages.en,
+  history: historyMessages.en,
+  search: searchMessages.en,
+  welcome: welcomeMessages.en,
   palette: {
     placeholder: "Go to a passage, e.g. John 3:16 or ዮሐ 3፥16",
     goTo: "Go to",
@@ -165,7 +182,11 @@ const en = {
 export type Messages = typeof en;
 
 const am: Messages = {
-  nav: { today: "ዛሬ", read: "ንባብ", study: "ጥናት", progress: "እድገት", settings: "ቅንብሮች" },
+  nav: { today: "ዛሬ", read: "ንባብ", plans: "ዕቅዶች", study: "ጥናት", history: "ታሪክ", progress: "እድገት", settings: "ቅንብሮች" },
+  plans: plansMessages.am,
+  history: historyMessages.am,
+  search: searchMessages.am,
+  welcome: welcomeMessages.am,
   palette: {
     placeholder: "ወደ ምንባብ ይሂዱ፤ ለምሳሌ ዮሐ 3፥16 ወይም John 3:16",
     goTo: "ወደ ምንባብ ሂድ",
