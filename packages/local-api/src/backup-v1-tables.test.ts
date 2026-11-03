@@ -21,7 +21,7 @@ const plan = {
   createdAt: 1,
   updatedAt: 1,
   deletedAt: null,
-  planKey: "gospel-of-john",
+  planKey: "john-21",
   title: "Gospel of John",
   definition: null,
   startedOn: "2026-11-01",

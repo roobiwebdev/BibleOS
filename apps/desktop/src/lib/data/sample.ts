@@ -110,6 +110,14 @@ export async function seedSample(api: LocalApi): Promise<void> {
   await new Promise((resolve) => setTimeout(resolve, 5));
   await run(commands.reading.markChapterRead, { chapterVid: v("JHN", 3) });
 
+  // A plan under way: Gospel of John, started six days ago, four days done (so catch-up shows).
+  const plan = await api.run(commands.plans.start, {
+    kind: "builtIn",
+    planKey: "john-21",
+    startedOn: addDays(dayKeyOf(new Date()), -6),
+  });
+  if (plan.ok) for (let day = 1; day <= 4; day++) await run(commands.plans.completeDay, { planId: plan.data.id, day });
+
   const random = seeded(7);
   const today = dayKeyOf(new Date());
   // Each sample day reads a stretch of a book, so History shows varied chapters.
