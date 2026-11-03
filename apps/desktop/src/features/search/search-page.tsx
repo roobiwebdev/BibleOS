@@ -1,4 +1,5 @@
 import { BOOKS, bookByCode, bookByOrd } from "@starter/bible-core/books";
+import { hasEthiopic } from "@starter/bible-core/normalize";
 import { formatRange } from "@starter/bible-core/range";
 import { formatReference, matchBooks, parseReference } from "@starter/bible-core/reference";
 import { parseScope, splitBySpans, type MatchMode, type SearchScope } from "@starter/bible-core/search";
@@ -240,6 +241,17 @@ export function SearchPage() {
   }
 
   const changeTranslation = (id: string) => void navigate({ search: (prev) => ({ ...prev, t: id }) });
+
+  // Words typed in one script can't match a Bible in the other ("Love" in an Amharic Bible).
+  // Offer the reader's own translation in the typed language, else the first one we ship.
+  const queryLang: Language | null = hasEthiopic(trimmed) ? "am" : /[a-z]/i.test(trimmed) ? "en" : null;
+  const offered =
+    queryLang && queryLang !== lang && !goToRef
+      ? (TRANSLATIONS.find((x) => x.id === prefs.mainTranslation && x.language === queryLang) ??
+        TRANSLATIONS.find((x) => x.id === prefs.parallelTranslation && x.language === queryLang) ??
+        TRANSLATIONS.find((x) => x.language === queryLang && x.scope === "bible"))
+      : undefined;
+  const languageMismatch = queryLang && offered ? { language: queryLang, translation: offered } : undefined;
   const optionClass = (id: string) =>
     cn(
       "block w-full cursor-pointer rounded-xl px-3 py-2.5 text-left transition-colors",
@@ -426,7 +438,25 @@ export function SearchPage() {
         </Button>
       )}
 
-      {data && data.total === 0 && trimmed && !search.loading && !ntOnlyMiss && !goToRef && (
+      {languageMismatch && (
+        <div
+          role="status"
+          className="mt-4 flex flex-wrap items-center gap-3 rounded-xl border bg-card px-4 py-3 text-sm"
+        >
+          <span className="flex-1">
+            {t.search.languageMismatch(
+              trimmed,
+              translation?.name ?? translationId,
+              t.search.languageNames[languageMismatch.language],
+            )}
+          </span>
+          <Button size="sm" onClick={() => changeTranslation(languageMismatch.translation.id)}>
+            {t.search.searchIn(languageMismatch.translation.abbreviation)}
+          </Button>
+        </div>
+      )}
+
+      {data && data.total === 0 && trimmed && !search.loading && !ntOnlyMiss && !goToRef && !languageMismatch && (
         <div className="mt-6 flex flex-col items-start gap-3">
           <p className="text-base font-medium">{t.search.noResults(trimmed)}</p>
           {data.suggestion && (
