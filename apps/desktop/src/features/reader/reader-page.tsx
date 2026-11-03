@@ -7,9 +7,7 @@ import { Button } from "@starter/ui/components/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuGroup,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@starter/ui/components/dropdown-menu";
@@ -45,6 +43,7 @@ import {
 
 import { BookmarkButton } from "../../components/bookmark-button";
 import { HIGHLIGHT_BG } from "../../components/highlight-colors";
+import { TranslationMenu } from "../../components/translation-menu";
 import type { ChapterVerse } from "../../lib/bible/source";
 import { useAvailableChapters } from "../../lib/bible/use-chapter";
 import { usePreferences, useT } from "../../lib/state/preferences";
@@ -55,38 +54,6 @@ import { ChapterPicker } from "./chapter-picker";
 import { ChapterText, ParallelText, type VerseDecor } from "./chapter-text";
 import { NotesRail } from "./notes-rail";
 import { adjacentChapter, useChapterWindow, type WindowChapter } from "./use-chapter-window";
-
-function TranslationPicker({ value, onChange }: { value: string; onChange: (id: string) => void }) {
-  const current = TRANSLATIONS.find((t) => t.id === value);
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild nativeButton>
-        <Button variant="ghost" size="sm" className="gap-1 font-semibold">
-          {current?.abbreviation ?? value}
-          <ChevronDown className="size-3 opacity-60" />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-72">
-        {(["am", "en"] as const).map((lang, i) => (
-          // Base UI requires a group label to sit inside a menu group.
-          <DropdownMenuGroup key={lang}>
-            {i > 0 && <DropdownMenuSeparator />}
-            <DropdownMenuLabel>{lang === "am" ? "አማርኛ · Amharic" : "English"}</DropdownMenuLabel>
-            {TRANSLATIONS.filter((t) => t.language === lang).map((t) => (
-              <DropdownMenuItem key={t.id} onClick={() => onChange(t.id)} className="gap-2">
-                <span className="w-9 text-xs font-semibold text-muted-foreground">{t.abbreviation}</span>
-                <span lang={t.language} className="flex-1 truncate">
-                  {t.name}
-                </span>
-                {t.id === value && <Check className="size-3.5" />}
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuGroup>
-        ))}
-      </DropdownMenuContent>
-    </DropdownMenu>
-  );
-}
 
 function IconToggle({
   label,
@@ -439,13 +406,13 @@ export function ReaderPage() {
           </h1>
           <div className="ml-auto flex shrink-0 items-center gap-0.5">
             <BookmarkButton range={selection ?? chapterRange(current)} />
-            <TranslationPicker value={prefs.mainTranslation} onChange={(id) => update({ mainTranslation: id })} />
+            <TranslationMenu value={prefs.mainTranslation} onChange={(id) => update({ mainTranslation: id })} />
             {prefs.parallel && (
               <>
                 <span aria-hidden className="text-muted-foreground">
                   ·
                 </span>
-                <TranslationPicker
+                <TranslationMenu
                   value={prefs.parallelTranslation}
                   onChange={(id) => update({ parallelTranslation: id })}
                 />
