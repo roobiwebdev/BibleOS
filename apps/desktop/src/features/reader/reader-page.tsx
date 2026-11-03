@@ -34,6 +34,7 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useState, useSyncExternalStore, type MouseEvent, type ReactNode } from "react";
 
+import { BookmarkButton } from "../../components/bookmark-button";
 import { HIGHLIGHT_BG } from "../../components/highlight-colors";
 import type { ChapterData, ChapterVerse } from "../../lib/bible/source";
 import { useAvailableChapters, useChapter } from "../../lib/bible/use-chapter";
@@ -359,6 +360,7 @@ export function ReaderPage() {
             </button>
           </h1>
           <div className="ml-auto flex shrink-0 items-center gap-0.5">
+            <BookmarkButton range={selection ?? chapterRange(chapterId)} />
             <TranslationPicker value={prefs.mainTranslation} onChange={(id) => update({ mainTranslation: id })} />
             {prefs.parallel && (
               <>

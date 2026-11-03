@@ -2,9 +2,11 @@ import type { SqliteExecutor } from "@starter/local-db/executor";
 
 import type { Command, CommandDeps, CommandLogger, CommandResult } from "./command";
 import { backupCommands } from "./commands/backup";
+import { bookmarkCommands } from "./commands/bookmarks";
 import { collectionCommands } from "./commands/collections";
 import { highlightCommands } from "./commands/highlights";
 import { noteCommands } from "./commands/notes";
+import { planCommands } from "./commands/plans";
 import { readingCommands } from "./commands/reading";
 import { settingsCommands } from "./commands/settings";
 
@@ -21,6 +23,8 @@ export const commands = {
   reading: readingCommands,
   settings: settingsCommands,
   backup: backupCommands,
+  plans: planCommands,
+  bookmarks: bookmarkCommands,
 };
 
 export interface LocalApi {

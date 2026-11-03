@@ -3,6 +3,9 @@ import { createHashHistory, createRootRoute, createRoute, createRouter, redirect
 import { z } from "zod";
 
 import { AppShell } from "./app/app-shell";
+import { HistoryPage } from "./features/history/history-page";
+import { PlansPage } from "./features/plans/plans-page";
+import { SearchPage } from "./features/search/search-page";
 import { ProgressPage } from "./features/progress/progress-page";
 import { ReaderPage } from "./features/reader/reader-page";
 import { SettingsPage } from "./features/settings/settings-page";
@@ -53,10 +56,35 @@ export const studyRoute = createRoute({
   component: StudyPage,
 });
 
+const plansRoute = createRoute({ getParentRoute: () => rootRoute, path: "/plans", component: PlansPage });
+const historyRoute = createRoute({ getParentRoute: () => rootRoute, path: "/history", component: HistoryPage });
+
+export const searchSearch = z.object({
+  q: z.string().max(200).optional().catch(undefined),
+  t: z.string().max(64).optional().catch(undefined),
+});
+
+export const searchRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/search",
+  validateSearch: searchSearch,
+  component: SearchPage,
+});
+
 const progressRoute = createRoute({ getParentRoute: () => rootRoute, path: "/progress", component: ProgressPage });
 const settingsRoute = createRoute({ getParentRoute: () => rootRoute, path: "/settings", component: SettingsPage });
 
-const routeTree = rootRoute.addChildren([indexRoute, todayRoute, readRoute, studyRoute, progressRoute, settingsRoute]);
+const routeTree = rootRoute.addChildren([
+  indexRoute,
+  todayRoute,
+  readRoute,
+  studyRoute,
+  progressRoute,
+  settingsRoute,
+  plansRoute,
+  historyRoute,
+  searchRoute,
+]);
 
 export const router = createRouter({ routeTree, history: createHashHistory() });
 
