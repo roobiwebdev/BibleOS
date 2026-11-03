@@ -55,7 +55,7 @@ export function Hero() {
             "radial-gradient(ellipse 900px 520px at 50% -60px, color-mix(in oklch, var(--primary) 12%, transparent), transparent)",
         }}
       />
-      <div className="relative mx-auto max-w-6xl px-4 pt-14 pb-20 sm:px-6 sm:pt-20">
+      <div className="relative mx-auto max-w-6xl px-4 pt-32 pb-20 sm:px-6 sm:pt-40">
         <div className="mx-auto flex max-w-3xl flex-col items-center text-center">
           <AppIcon size={88} className="drop-shadow-sm" />
           <p className="eyebrow mt-6">{COPY.hero.eyebrow}</p>

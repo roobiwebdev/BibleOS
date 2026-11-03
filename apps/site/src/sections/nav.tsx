@@ -15,7 +15,8 @@ const LINKS = [
 
 /**
  * SOURCE OF TRUTH KEYWORDS: SiteNav, header, navigation, theme toggle, skip link
- * WHAT:  The sticky page header: logo, section links, GitHub, theme toggle and a download link.
+ * WHAT:  The floating page header: a rounded bar with the logo, section links, GitHub, theme
+ *        toggle and a download link, inset from the top and edges of the window.
  * WHY:   Short pages still need a way back to Download from anywhere; the section links hide on
  *        small screens to keep the bar on one line.
  * WHERE: app.tsx.
@@ -23,17 +24,20 @@ const LINKS = [
 export function SiteNav() {
   const [theme, toggle] = useSiteTheme();
   return (
-    <header className="sticky top-0 z-40 border-b border-transparent bg-background/80 backdrop-blur-md supports-[backdrop-filter]:bg-background/70">
+    <header className="fixed inset-x-0 top-0 z-40 px-3 pt-3 sm:px-6 sm:pt-4">
       <a
         href="#main"
         className="sr-only focus:not-sr-only focus:absolute focus:top-3 focus:left-3 focus:rounded-lg focus:bg-card focus:px-3 focus:py-2"
       >
         {COPY.nav.skip}
       </a>
-      <nav aria-label="Main" className="mx-auto flex h-16 max-w-6xl items-center gap-2 px-4 sm:px-6">
+      <nav
+        aria-label="Main"
+        className="mx-auto flex h-14 max-w-6xl items-center gap-1 rounded-full border bg-background/75 py-2 pr-2 pl-4 shadow-sm backdrop-blur-md sm:gap-2 sm:pl-5"
+      >
         <a href="#top" className="mr-auto flex items-center gap-2.5 rounded-lg">
-          <AppIcon size={32} />
-          <span className="text-[16px] font-semibold tracking-tight">BibleOS</span>
+          <AppIcon size={28} />
+          <span className="text-[17px] font-semibold tracking-tight">BibleOS</span>
         </a>
         <ul className="hidden items-center gap-1 lg:flex">
           {LINKS.map((l) => (
@@ -65,7 +69,7 @@ export function SiteNav() {
         </button>
         <a
           href="#download"
-          className="rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90"
+          className="rounded-full border bg-card px-4 py-2 text-sm font-medium text-foreground shadow-xs transition-colors hover:bg-muted"
         >
           {COPY.nav.download}
         </a>
