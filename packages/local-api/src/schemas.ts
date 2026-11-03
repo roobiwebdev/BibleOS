@@ -97,6 +97,8 @@ export const preferencesSchema = z.object({
   onboarded: z.boolean(),
   /** Take a daily copy of the study database (kept in the app data folder). */
   autoBackup: z.boolean(),
+  /** Look for a new BibleOS release when the app opens (installing always asks first). */
+  checkUpdates: z.boolean(),
 });
 export type Preferences = z.output<typeof preferencesSchema>;
 export const preferencesPatchSchema = preferencesSchema.partial().strict();
@@ -119,6 +121,7 @@ export const DEFAULT_PREFERENCES: Preferences = {
   rules: { ...DEFAULT_STREAK_RULES, restWeekdays: [...DEFAULT_STREAK_RULES.restWeekdays] },
   onboarded: false,
   autoBackup: true,
+  checkUpdates: true,
 };
 
 export function rangeOf(row: { startVid: number; endVid: number }): VerseRange {

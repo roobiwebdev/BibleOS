@@ -10,7 +10,8 @@
     "build:vite": "tsc --noEmit && vite build",
     "bibles": "pnpm --filter @starter/bible-data build:bibles --out ../../apps/desktop/src-tauri/resources/bibles && pnpm --filter @starter/bible-data export:preview --from ../../apps/desktop/src-tauri/resources/bibles --out ../../apps/desktop/public/preview-bible",
     "tauri": "tauri",
-    "check-types": "tsc --noEmit"
+    "check-types": "tsc --noEmit",
+    "release:version": "node scripts/set-version.mjs"
   },
   "dependencies": {
     "@fontsource-variable/inter": "^5.3.0",
@@ -25,6 +26,8 @@
     "@tanstack/react-form": "catalog:",
     "@tanstack/react-router": "^1.170.46",
     "@tauri-apps/api": "^2.12.4",
+    "@tauri-apps/plugin-process": "^2.4.0",
+    "@tauri-apps/plugin-updater": "^2.14.1",
     "lucide-react": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:",

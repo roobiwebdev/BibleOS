@@ -3,6 +3,7 @@ import type { Locale } from "@starter/bible-core/books";
 import { historyMessages } from "./sections/history";
 import { plansMessages } from "./sections/plans";
 import { searchMessages } from "./sections/search";
+import { updatesMessages } from "./sections/updates";
 import { welcomeMessages } from "./sections/welcome";
 
 /**
@@ -27,6 +28,7 @@ const en = {
   history: historyMessages.en,
   search: searchMessages.en,
   welcome: welcomeMessages.en,
+  updates: updatesMessages.en,
   palette: {
     placeholder: "Go to a passage, e.g. John 3:16 or ዮሐ 3፥16",
     goTo: "Go to",
@@ -148,7 +150,7 @@ const en = {
     previewNote: "Preview build: changes last until you reload.",
     appearance: "Appearance",
     theme: "Theme",
-    themes: { system: "Match macOS", paper: "Paper", sepia: "Sepia", night: "Night" },
+    themes: { system: "Match system", paper: "Paper", sepia: "Sepia", night: "Night" },
     accent: "Accent",
     textSize: "Text size",
     lineSpacing: "Line spacing",
@@ -187,6 +189,7 @@ const am: Messages = {
   history: historyMessages.am,
   search: searchMessages.am,
   welcome: welcomeMessages.am,
+  updates: updatesMessages.am,
   palette: {
     placeholder: "ወደ ምንባብ ይሂዱ፤ ለምሳሌ ዮሐ 3፥16 ወይም John 3:16",
     goTo: "ወደ ምንባብ ሂድ",
@@ -306,7 +309,7 @@ const am: Messages = {
     previewNote: "ቅድመ እይታ፦ ለውጦች ገጹን እስኪያድሱ ድረስ ብቻ ይቆያሉ።",
     appearance: "መልክ",
     theme: "ገጽታ",
-    themes: { system: "እንደ macOS", paper: "ወረቀት", sepia: "ሴፒያ", night: "ሌሊት" },
+    themes: { system: "እንደ ሲስተሙ", paper: "ወረቀት", sepia: "ሴፒያ", night: "ሌሊት" },
     accent: "ዋና ቀለም",
     textSize: "የፊደል መጠን",
     lineSpacing: "የመስመር ክፍተት",
