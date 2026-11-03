@@ -45,7 +45,7 @@ pnpm --filter desktop bibles   # builds the bundled translations
 pnpm --filter desktop dev      # run the app
 ```
 
-See [docs/engineering/desktop.md](docs/engineering/desktop.md) for how it's built and [docs/engineering/releasing.md](docs/engineering/releasing.md) for how releases are made. Bundled translations keep their own licences, listed in the app under Settings → Licences and in `packages/bible-data/src/manifest.ts`.
+See [docs/engineering/desktop.md](docs/engineering/desktop.md) for how it's built and [docs/engineering/releasing.md](docs/engineering/releasing.md) for how releases are made. The code is under the [MIT licence](LICENSE). Bible translations are not covered by it: each keeps its own licence, listed in the app under Settings → Licences and in `packages/bible-data/src/manifest.ts`.
 
 BibleOS is built on Project Starter. The web and SaaS code described in the rest of this README stays in the repo but is not part of the desktop app.
 
