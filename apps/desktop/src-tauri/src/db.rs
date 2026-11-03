@@ -95,7 +95,7 @@ fn open_study(app: &AppHandle) -> Result<Connection, String> {
     Ok(conn)
 }
 
-fn with_study<T>(
+pub(crate) fn with_study<T>(
     app: &AppHandle,
     dbs: &State<'_, Databases>,
     f: impl FnOnce(&Connection) -> Result<T, String>,

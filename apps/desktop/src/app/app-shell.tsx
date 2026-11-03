@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 
 import { WeekDots } from "../components/week-dots";
 import { usePreferences, useT } from "../lib/state/preferences";
+import { useAutoBackup } from "../lib/state/use-auto-backup";
 import { useHabits } from "../lib/state/use-habits";
 import logoNight from "../assets/logo-night.png";
 import logoPaper from "../assets/logo-paper.png";
@@ -29,6 +30,7 @@ export function AppShell() {
   const t = useT();
   const { prefs, resolvedTheme } = usePreferences();
   const habits = useHabits();
+  useAutoBackup();
   const [paletteOpen, setPaletteOpen] = useState(false);
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   // Focus mode belongs to the reader; every other screen keeps its navigation.
