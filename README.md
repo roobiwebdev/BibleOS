@@ -1,8 +1,53 @@
 # BibleOS
 
-BibleOS is a local-first macOS Bible study app in `apps/desktop` (Tauri 2, Vite, React 19, local SQLite). It offers Amharic and English parallel reading, study notes and a reading-habit tracker. Everything stays on the user's Mac. See [docs/engineering/desktop.md](docs/engineering/desktop.md) and the [Desktop app](#desktop-app) commands below.
+BibleOS is a free, local-first Bible study app for Mac, Windows and Linux. Read Amharic and English side by side, keep notes and highlights, follow reading plans and track your reading habit. Everything stays on your computer: there's no account, and it works offline.
 
-It is built on Project Starter. The web and SaaS code described in the rest of this README stays in the repo but is not part of the desktop build.
+## Download
+
+Get the latest version from **[Releases](https://github.com/roobiwebdev/BibleOS/releases/latest)**:
+
+| Computer                                | File                                                    |
+| --------------------------------------- | ------------------------------------------------------- |
+| Mac (Apple Silicon or Intel), macOS 12+ | `BibleOS_<version>_universal.dmg`                       |
+| Windows 10 or 11                        | `BibleOS_<version>_x64-setup.exe`                       |
+| Linux (x64)                             | `.AppImage`, `.deb` (Debian, Ubuntu) or `.rpm` (Fedora) |
+
+Once installed, BibleOS checks for new versions when it opens and asks before installing one.
+
+## Install
+
+BibleOS is an independent free app, so its installers aren't signed with paid Apple or Microsoft certificates. Your computer will warn you the first time. Updates are signed with BibleOS's own key and checked before they install.
+
+**Mac**
+
+1. Open the `.dmg` and drag **BibleOS** into **Applications**.
+2. Open BibleOS. macOS says it "could not verify" the app; click **Done**.
+3. Open **System Settings → Privacy & Security**, scroll down and click **Open Anyway** next to BibleOS, then confirm. (On macOS 12–14 you can instead right-click the app and choose **Open**.)
+
+**Windows**
+
+1. Run `BibleOS_<version>_x64-setup.exe`.
+2. If you see "Windows protected your PC", click **More info → Run anyway**.
+
+**Linux**
+
+- AppImage: `chmod +x BibleOS_*.AppImage && ./BibleOS_*.AppImage`
+- Debian/Ubuntu: `sudo apt install ./BibleOS_*_amd64.deb`
+- Fedora/openSUSE: `sudo dnf install ./BibleOS-*.x86_64.rpm`
+
+## Build from source
+
+The app lives in `apps/desktop` (Tauri 2, Vite, React 19, local SQLite). With Node 24, pnpm 11 and Rust installed:
+
+```bash
+pnpm install
+pnpm --filter desktop bibles   # builds the bundled translations
+pnpm --filter desktop dev      # run the app
+```
+
+See [docs/engineering/desktop.md](docs/engineering/desktop.md) for how it's built and [docs/engineering/releasing.md](docs/engineering/releasing.md) for how releases are made. Bundled translations keep their own licences, listed in the app under Settings → Licences and in `packages/bible-data/src/manifest.ts`.
+
+BibleOS is built on Project Starter. The web and SaaS code described in the rest of this README stays in the repo but is not part of the desktop app.
 
 ## Project Starter
 
@@ -10,7 +55,7 @@ Project Starter is a production-ready monorepo for building a SaaS product. It s
 
 > **Status.** Every Batman feature is ported and verified from a clean clone: install, `pnpm bootstrap`, `pnpm check` (lint, format, types, unit and database tests), production build and the Playwright smoke tests all pass. Real OAuth logins, Resend delivery, Polar checkout and R2 uploads need your own keys, so they are covered by unit tests but not yet verified against the live services. See [Known gaps](#known-gaps).
 
-## Install
+## Install Project Starter
 
 Copy and paste this to start a new project (needs Node 22+, pnpm 11, and Docker or a Neon database):
 
@@ -152,10 +197,10 @@ The desktop app needs Rust (install with `rustup`) for the Tauri commands; the b
 | `pnpm --filter desktop bibles`                   | Build the translation databases into `src-tauri/resources/bibles` and the preview JSON into `public/preview-bible`. Run once first. |
 | `pnpm --filter desktop dev:vite`                 | Desktop UI in the browser preview on http://localhost:1420                                                                          |
 | `pnpm --filter desktop dev`                      | Desktop app in Tauri                                                                                                                |
-| `pnpm --filter desktop build`                    | Production build (`.app` and DMG)                                                                                                   |
+| `pnpm --filter desktop build`                    | Production build for this computer (Mac: `.app` and DMG). Releases for all platforms: [releasing.md](docs/engineering/releasing.md) |
 | `pnpm --filter @starter/bible-data build:bibles` | Translation databases only                                                                                                          |
 
-Builds are unsigned (no Apple Developer Program). The first time someone opens the app, they allow it once in System Settings → Privacy & Security → Open Anyway.
+Builds are unsigned (no Apple Developer ID or Windows certificate); see [Install](#install) for the one-time warning.
 
 ## Project structure
 
@@ -193,7 +238,7 @@ Project-Starter/
 
 ## Start a new project from this starter
 
-1. **Clone the repo** with the [Install](#install) command, then give it a new name in the root `package.json`.
+1. **Clone the repo** with the [Install Project Starter](#install-project-starter) command, then give it a new name in the root `package.json`.
 2. **Rename the package scope (optional).** Packages are named `@starter/*`. To rename, change every `package.json` name and dependency, every import, and `transpilePackages` in `apps/web/next.config.ts`. Then run `pnpm install` and `pnpm check-types`.
 3. **Branding.** Edit `packages/config/src/branding.ts`. The live app name, description and SEO come from Admin > General (stored in the database), so set them there too after the first sign-in. The database default for the app name is in `packages/db/src/schema/app.ts`.
 4. **Theme.** Pick a preset in Admin > General, or add your own (see [customizing.md](docs/engineering/customizing.md)).

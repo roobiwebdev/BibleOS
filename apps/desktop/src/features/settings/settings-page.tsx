@@ -3,14 +3,15 @@ import { Button } from "@starter/ui/components/button";
 import { Switch } from "@starter/ui/components/switch";
 import { cn } from "@starter/ui/lib/utils";
 import { isTauri } from "@tauri-apps/api/core";
-import { Check, ChevronDown, Download, FileText, Minus, Plus, Upload } from "lucide-react";
-import { useId, useState, type ReactNode } from "react";
+import { Check, ChevronDown, Download, FileText, Minus, Plus, RefreshCw, Upload } from "lucide-react";
+import { useEffect, useId, useState, type ReactNode } from "react";
 
 import { Page, PageHeader } from "../../components/page";
 import { Segmented } from "../../components/segmented";
 import { TranslationSelect } from "../../components/translation-select";
 import { useFormatDate } from "../../lib/format";
 import { ACCENTS, usePreferences, useT, type LineWidth } from "../../lib/state/preferences";
+import { appVersion, checkForUpdates, installUpdate, useUpdates, type UpdateState } from "../../lib/updates";
 import { useYourData } from "./use-your-data";
 
 function Group({ title, children }: { title: string; children: ReactNode }) {
@@ -85,6 +86,80 @@ function Stepper({
         <Plus className="size-3.5" />
       </button>
     </div>
+  );
+}
+
+/** What the Updates row says for each state of the shared update store. */
+function updateHint(state: UpdateState, t: ReturnType<typeof useT>): string {
+  switch (state.status) {
+    case "unsupported":
+      return t.updates.previewOnly;
+    case "idle":
+      return t.updates.checkOnOpenHint;
+    case "checking":
+      return t.updates.checking;
+    case "current":
+      return t.updates.current;
+    case "available":
+      return t.updates.available(state.version);
+    case "downloading":
+      return t.updates.downloading(state.total ? Math.round((state.received / state.total) * 100) : undefined);
+    case "restarting":
+      return t.updates.restarting;
+    case "error":
+      return t.updates.failed;
+  }
+}
+
+function UpdatesGroup() {
+  const t = useT();
+  const { prefs, update } = usePreferences();
+  const state = useUpdates();
+  const [version, setVersion] = useState<string>();
+  useEffect(() => {
+    void appVersion().then(setVersion);
+  }, []);
+  const native = state.status !== "unsupported";
+  const busy = state.status === "checking" || state.status === "downloading" || state.status === "restarting";
+
+  return (
+    <Group title={t.updates.title}>
+      <Row label={version ? t.updates.version(version) : t.updates.title} hint={updateHint(state, t)}>
+        {(id) =>
+          state.status === "available" ? (
+            <Button size="sm" aria-labelledby={id} onClick={() => void installUpdate()}>
+              <Download /> {t.updates.install}
+            </Button>
+          ) : (
+            <Button
+              variant="outline"
+              size="sm"
+              aria-labelledby={id}
+              disabled={!native || busy}
+              onClick={() => void checkForUpdates()}
+            >
+              <RefreshCw className={cn(state.status === "checking" && "animate-spin")} /> {t.updates.checkNow}
+            </Button>
+          )
+        }
+      </Row>
+      {state.status === "available" && state.notes && (
+        <div className="px-5 py-3">
+          <p className="text-xs font-medium text-muted-foreground">{t.updates.whatsNew}</p>
+          <p className="mt-1 text-sm whitespace-pre-line">{state.notes}</p>
+        </div>
+      )}
+      <Row label={t.updates.checkOnOpen}>
+        {(id) => (
+          <Switch
+            aria-labelledby={id}
+            disabled={!native}
+            checked={prefs.checkUpdates}
+            onCheckedChange={(on) => update({ checkUpdates: on })}
+          />
+        )}
+      </Row>
+    </Group>
   );
 }
 
@@ -375,6 +450,8 @@ export function SettingsPage() {
             )}
           </Row>
         </Group>
+
+        <UpdatesGroup />
 
         <Group title={t.settings.licences}>
           {TRANSLATIONS.map((tr) => {

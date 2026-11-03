@@ -7,6 +7,7 @@ import { WeekDots } from "../components/week-dots";
 import { usePreferences, useT } from "../lib/state/preferences";
 import { useAutoBackup } from "../lib/state/use-auto-backup";
 import { useHabits } from "../lib/state/use-habits";
+import { useUpdateCheck } from "../lib/state/use-update-check";
 import logoNight from "../assets/logo-night.png";
 import logoPaper from "../assets/logo-paper.png";
 import logoSepia from "../assets/logo-sepia.png";
@@ -31,6 +32,7 @@ export function AppShell() {
   const { prefs, resolvedTheme } = usePreferences();
   const habits = useHabits();
   useAutoBackup();
+  useUpdateCheck();
   const [paletteOpen, setPaletteOpen] = useState(false);
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   // Focus mode belongs to the reader; every other screen keeps its navigation.
