@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "BibleOS",
-  "version": "0.1.0",
+  "version": "../package.json",
   "identifier": "app.bibleos.desktop",
   "build": {
     "beforeDevCommand": "pnpm dev:vite",
@@ -28,11 +28,64 @@
   },
   "bundle": {
     "active": true,
-    "targets": ["app", "dmg"],
+    "targets": "all",
     "category": "Reference",
     "copyright": "BibleOS. Bundled scripture under the licences listed in the app.",
-    "icon": ["icons/32x32.png", "icons/128x128.png", "icons/128x128@2x.png", "icons/icon.icns", "icons/icon.png"],
-    "resources": { "resources/bibles/": "bibles/" },
-    "macOS": { "minimumSystemVersion": "12.0" }
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico",
+      "icons/icon.png"
+    ],
+    "resources": {
+      "resources/bibles/": "bibles/"
+    },
+    "macOS": {
+      "minimumSystemVersion": "12.0",
+      "dmg": {
+        "windowSize": {
+          "width": 600,
+          "height": 400
+        },
+        "appPosition": {
+          "x": 170,
+          "y": 200
+        },
+        "applicationFolderPosition": {
+          "x": 430,
+          "y": 200
+        }
+      }
+    },
+    "createUpdaterArtifacts": true,
+    "shortDescription": "A calm, local-first Bible study app",
+    "longDescription": "BibleOS is a free Bible study app that keeps your notes, highlights and reading habits on your own computer. Read Amharic and English side by side, follow reading plans, search, and work offline.",
+    "homepage": "https://github.com/roobiwebdev/BibleOS",
+    "publisher": "BibleOS",
+    "windows": {
+      "nsis": {
+        "installMode": "currentUser"
+      },
+      "webviewInstallMode": {
+        "type": "downloadBootstrapper"
+      }
+    },
+    "linux": {
+      "deb": {
+        "section": "text"
+      },
+      "rpm": {}
+    }
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDJCREVERkYwRTYwQjhCNDMKUldSRGl3dm04Ti9lS3lIRVViWWZ5U1UxaWlicFU0UXdNSXBsa1YrZWRTaU5NNkJoUVZuS3g1MjUK",
+      "endpoints": ["https://github.com/roobiwebdev/BibleOS/releases/latest/download/latest.json"],
+      "windows": {
+        "installMode": "passive"
+      }
+    }
   }
 }
