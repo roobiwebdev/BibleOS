@@ -1,6 +1,6 @@
 # The desktop app
 
-BibleOS is a macOS Bible study app in `apps/desktop`. This page explains why the desktop rules in [CLAUDE.md](../../CLAUDE.md) look the way they do. The approved plan behind it is the BibleOS engineering plan (Phase Six); items marked **planned** below are approved but not built yet.
+BibleOS is a desktop Bible study app for macOS, Windows and Linux in `apps/desktop`. This page explains why the desktop rules in [CLAUDE.md](../../CLAUDE.md) look the way they do. The approved plan behind it is the BibleOS engineering plan (Phase Six); items marked **planned** below are approved but not built yet.
 
 ## Local-first
 
@@ -19,7 +19,7 @@ Everything a reader creates (highlights, notes, collections, reading time) stays
 | Reuse the React design system | The UI is a Vite + React 19 SPA; `packages/ui` has no Next.js dependency                      |
 | Local SQLite                  | A small Rust bridge (`src-tauri/src/db.rs`, rusqlite with bundled SQLite)                     |
 | Tight permissions             | Capabilities (`src-tauri/capabilities/default.json`) allow only the plugins and calls we name |
-| Updates                       | `tauri-plugin-updater` with its own signing key (planned)                                     |
+| Updates                       | `tauri-plugin-updater` with its own signing key (see [releasing.md](releasing.md))            |
 | Windows and tablets later     | The same app builds for Windows, and Tauri 2 has an iOS target                                |
 
 Rust is kept to plugin wiring (`src-tauri/src/lib.rs`). Business logic lives in TypeScript packages so it can be unit tested in Node and reused on other platforms.
@@ -28,7 +28,7 @@ The SPA uses TanStack Router with **hash history** (`src/router.tsx`). Hash URLs
 
 ### No `.env`
 
-A desktop app has no deployment environment to read from. Build-time config (window, CSP, bundle id, resources) lives in `src-tauri/tauri.conf.json`. OS permissions live in `src-tauri/capabilities/`. Anything the user can change belongs in Settings, validated by the settings schema (planned in `local-api`; today `src/lib/state/preferences.tsx` holds the same shape in memory). v1 has no secrets. When online translation providers arrive, their keys go in the macOS Keychain.
+A desktop app has no deployment environment to read from. Build-time config (window, CSP, bundle id, resources) lives in `src-tauri/tauri.conf.json`. OS permissions live in `src-tauri/capabilities/`. Anything the user can change belongs in Settings, validated by `preferencesSchema` in `local-api`. v1 has no secrets. When online translation providers arrive, their keys go in the macOS Keychain.
 
 ## Data model
 
@@ -54,9 +54,9 @@ The build compares each translation's verse coverage with the KJV grid and repor
 | Database               | Written by                                   | Opened by the app | Changes by                     |
 | ---------------------- | -------------------------------------------- | ----------------- | ------------------------------ |
 | `<translation>.sqlite` | `bible-data` build, one file per translation | read-only         | rebuilding from pinned sources |
-| `study.sqlite`         | `local-api` commands (planned)               | read-write        | Drizzle migrations             |
+| `study.sqlite`         | `local-api` commands                         | read-write        | Drizzle migrations             |
 
-Keeping scripture separate means a translation can be replaced or added without touching user data, and a bad migration can never damage scripture. The study database will live in `~/Library/Application Support/app.bibleos.desktop/`, with rotating backups (planned).
+Keeping scripture separate means a translation can be replaced or added without touching user data, and a bad migration can never damage scripture. The study database will live in `~/Library/Application Support/app.bibleos.desktop/`, with daily backups that keep the newest 14 copies.
 
 ## Translation pipeline and licensing
 
@@ -113,7 +113,7 @@ Drizzle's `sqlite-proxy` driver takes a small executor (`run`, `all`, `get`, `ba
 
 Later platforms add their own (expo-sqlite on a tablet, wa-sqlite or sql.js in a browser). One schema and one set of commands then work everywhere.
 
-The UI must never import the executor or a driver. If it did, a component could write without validation, a transaction or a `change_log` row. A lint rule to enforce this is planned. The current capability file already grants only `sql:allow-load`, `allow-select` and `allow-close` while the in-memory store is in use.
+The UI must never import the executor or a driver. If it did, a component could write without validation, a transaction or a `change_log` row. A lint rule to enforce this is planned. There is no SQL plugin: the capability file grants only core APIs plus the updater and relaunch, and SQLite is reached through the app's own `db.rs` commands.
 
 Drizzle is pinned exactly because the `sqlite-proxy` driver changed between release candidates. Upgrade it on purpose, with the command tests as the gate.
 
@@ -126,13 +126,13 @@ Drizzle is pinned exactly because the `sqlite-proxy` driver changed between rele
 
 ## Testing
 
-| Layer                 | How                                                                                                                                      |
-| --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| `bible-core`          | Vitest table tests: books, references (English, Amharic, typos, ranges), normalization, Ethiopian calendar, habit math, parallel, ranges |
-| `bible-data`          | Vitest for the USFM parser; the build itself verifies hashes and verse coverage                                                          |
-| `local-api` (planned) | Vitest on real SQLite through the `node:sqlite` executor, using the same schema and migrations as the app                                |
-| UI flows (planned)    | Playwright against the Vite preview (`dev:vite`)                                                                                         |
-| The real app          | Manual checks before each release with the `evidence-driven-testing` skill; evidence goes in `.artifacts/`                               |
+| Layer              | How                                                                                                                                      |
+| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `bible-core`       | Vitest table tests: books, references (English, Amharic, typos, ranges), normalization, Ethiopian calendar, habit math, parallel, ranges |
+| `bible-data`       | Vitest for the USFM parser; the build itself verifies hashes and verse coverage                                                          |
+| `local-api`        | Vitest on real SQLite through the `node:sqlite` executor, using the same schema and migrations as the app                                |
+| UI flows (planned) | Playwright against the Vite preview (`dev:vite`)                                                                                         |
+| The real app       | Manual checks before each release with the `evidence-driven-testing` skill; evidence goes in `.artifacts/`                               |
 
 Real SQLite in tests catches what a mock would hide: constraint errors, transaction behavior and migration mistakes. Playwright runs against the preview because `tauri-driver` (Tauri's WebDriver) has no macOS support. That leaves the native shell (menus, file dialogs, plugin wiring) to manual checks.
 
@@ -140,9 +140,9 @@ Real SQLite in tests catches what a mock would hide: constraint errors, transact
 
 ## Packaging and distribution
 
-- **Universal binary.** `tauri build --target universal-apple-darwin` produces one `.app` for Apple Silicon and Intel, plus a DMG. Bundle id `app.bibleos.desktop`, category Reference, minimum macOS 12 (see `tauri.conf.json`). `pnpm --filter desktop build` currently builds for the host architecture; the universal target is used for releases.
+- **Universal binary.** `tauri build --target universal-apple-darwin` produces one `.app` for Apple Silicon and Intel, plus a DMG. Bundle id `app.bibleos.desktop`, category Reference, minimum macOS 12 (see `tauri.conf.json`). `pnpm --filter desktop build` builds for the host architecture; the release workflow builds the universal Mac app plus Windows (NSIS `.exe`, `.msi`) and Linux (`.AppImage`, `.deb`, `.rpm`).
 - **Unsigned builds.** There is no Apple Developer Program membership, so the app ships ad-hoc signed and not notarized. The first time someone opens it, macOS blocks it; they allow it once in System Settings → Privacy & Security → Open Anyway. Developer ID signing and notarization can be added later with no code changes.
-- **Updates (planned).** `tauri-plugin-updater` checks a static `latest.json` on GitHub Releases. Updates are signed with Tauri's own updater key pair, separate from Apple signing, and the public key is embedded in the app. Keep the private key out of the repo.
+- **Updates.** `tauri-plugin-updater` checks `latest.json` on the latest GitHub Release when the app opens (Settings → Updates can turn this off) and installs only after the reader agrees. Updates are signed with BibleOS's own updater key pair, separate from Apple or Windows code signing, and the public key is embedded in `tauri.conf.json`. The private key never enters the repo. See [releasing.md](releasing.md).
 - **Hardening.** A strict CSP with no remote scripts, styles or fonts (`tauri.conf.json`). No `shell` plugin. Note Markdown is sanitized before rendering and imported JSON is validated with Zod before any write (planned with notes and import).
 
 ## Future platforms

@@ -1,0 +1,99 @@
+# Builds BibleOS for macOS (one universal app for Apple Silicon and Intel), Windows and Linux,
+# signs the update files with the BibleOS updater key, and uploads everything to a draft
+# GitHub Release. Publishing the draft is what makes it the version installed apps update to.
+#
+# Start a release: bump the version with `pnpm --filter desktop release:version <x.y.z>`,
+# merge, then push a tag `v<x.y.z>` from main (or run this workflow by hand).
+# Details: docs/engineering/releasing.md
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build (${{ matrix.name }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: macOS universal
+            os: macos-latest
+            args: --target universal-apple-darwin
+            rust-targets: aarch64-apple-darwin,x86_64-apple-darwin
+          - name: Windows x64
+            os: windows-latest
+            args: ""
+            rust-targets: ""
+          - name: Linux x64
+            # The oldest supported runner keeps the .deb and AppImage working on older distributions.
+            os: ubuntu-22.04
+            args: ""
+            rust-targets: ""
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Linux build dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev patchelf
+
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.rust-targets }}
+
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: apps/desktop/src-tauri -> target
+
+      - run: pnpm install --frozen-lockfile
+
+      # The translation archives are pinned by SHA-256 in packages/bible-data/src/manifest.ts,
+      # so the cache key changes whenever a source changes.
+      - uses: actions/cache@v4
+        with:
+          path: packages/bible-data/.cache
+          key: bible-sources-${{ hashFiles('packages/bible-data/src/manifest.ts') }}
+
+      - name: Build the bundled Bibles
+        run: pnpm --filter desktop bibles
+
+      - uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        with:
+          projectPath: apps/desktop
+          tauriScript: pnpm tauri
+          args: ${{ matrix.args }}
+          tagName: v__VERSION__
+          releaseName: BibleOS __VERSION__
+          releaseBody: |
+            Download the file for your computer below. Install guide: https://github.com/${{ github.repository }}#install
+
+            - **Mac** (Apple Silicon and Intel): `BibleOS_*_universal.dmg`
+            - **Windows**: `BibleOS_*_x64-setup.exe`
+            - **Linux**: `.AppImage`, `.deb` or `.rpm`
+
+            Already using BibleOS? It will offer this update when it opens.
+          releaseDraft: true
+          prerelease: false
+          includeUpdaterJson: true
