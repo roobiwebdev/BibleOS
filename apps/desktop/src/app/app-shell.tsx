@@ -6,7 +6,13 @@ import { useEffect, useState } from "react";
 import { WeekDots } from "../components/week-dots";
 import { usePreferences, useT } from "../lib/state/preferences";
 import { useHabits } from "../lib/state/use-habits";
+import logoNight from "../assets/logo-night.png";
+import logoPaper from "../assets/logo-paper.png";
+import logoSepia from "../assets/logo-sepia.png";
 import { CommandPalette } from "./command-palette";
+
+// The sidebar logo matches the Dock icon for the theme on screen.
+const LOGOS = { paper: logoPaper, sepia: logoSepia, night: logoNight } as const;
 
 const NAV = [
   { to: "/today", key: "today", icon: Sun },
@@ -18,7 +24,7 @@ const NAV = [
 /** Sidebar + content frame. The top strip is draggable and leaves room for the macOS window buttons. */
 export function AppShell() {
   const t = useT();
-  const { prefs } = usePreferences();
+  const { prefs, resolvedTheme } = usePreferences();
   const habits = useHabits();
   const [paletteOpen, setPaletteOpen] = useState(false);
   const pathname = useRouterState({ select: (s) => s.location.pathname });
@@ -48,9 +54,7 @@ export function AppShell() {
         <div data-tauri-drag-region className="h-11 shrink-0" />
         <div className="px-4 pb-4">
           <div className="flex items-center gap-2 px-1">
-            <span className="flex size-6 items-center justify-center rounded-md bg-primary text-primary-foreground">
-              <BookOpen className="size-3.5" />
-            </span>
+            <img src={LOGOS[resolvedTheme]} alt="" className="size-7 rounded-[7px] shadow-xs" />
             <span className="text-[15px] font-semibold tracking-tight">BibleOS</span>
           </div>
           <button
