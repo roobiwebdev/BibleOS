@@ -1,11 +1,17 @@
 import { TRANSLATIONS } from "@starter/bible-data/manifest";
+import { Button } from "@starter/ui/components/button";
 import { Switch } from "@starter/ui/components/switch";
 import { cn } from "@starter/ui/lib/utils";
-import { Check, ChevronDown, Minus, Plus } from "lucide-react";
+import { isTauri } from "@tauri-apps/api/core";
+import { Check, ChevronDown, Download, FileText, Minus, Plus, Upload } from "lucide-react";
 import { useId, useState, type ReactNode } from "react";
 
 import { Page, PageHeader } from "../../components/page";
+import { Segmented } from "../../components/segmented";
+import { TranslationSelect } from "../../components/translation-select";
+import { useFormatDate } from "../../lib/format";
 import { ACCENTS, usePreferences, useT, type LineWidth } from "../../lib/state/preferences";
+import { useYourData } from "./use-your-data";
 
 function Group({ title, children }: { title: string; children: ReactNode }) {
   const id = useId();
@@ -31,38 +37,6 @@ function Row({ label, hint, children }: { label: string; hint?: string; children
         {hint && <p className="mt-0.5 text-xs text-muted-foreground">{hint}</p>}
       </div>
       <div className="shrink-0">{children(id)}</div>
-    </div>
-  );
-}
-
-function Segmented<T extends string | number>({
-  value,
-  options,
-  onChange,
-  labelledBy,
-}: {
-  value: T;
-  options: ReadonlyArray<{ value: T; label: ReactNode }>;
-  onChange: (value: T) => void;
-  labelledBy: string;
-}) {
-  return (
-    <div role="radiogroup" aria-labelledby={labelledBy} className="flex rounded-lg bg-muted p-0.5">
-      {options.map((o) => (
-        <button
-          key={String(o.value)}
-          type="button"
-          role="radio"
-          aria-checked={value === o.value}
-          onClick={() => onChange(o.value)}
-          className={cn(
-            "rounded-md px-3 py-1 text-[13px] font-medium transition-colors",
-            value === o.value ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground",
-          )}
-        >
-          {o.label}
-        </button>
-      ))}
     </div>
   );
 }
@@ -114,41 +88,12 @@ function Stepper({
   );
 }
 
-function TranslationSelect({
-  value,
-  onChange,
-  labelledBy,
-}: {
-  value: string;
-  onChange: (id: string) => void;
-  labelledBy: string;
-}) {
-  return (
-    <div className="relative">
-      <select
-        aria-labelledby={labelledBy}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="h-8 max-w-64 appearance-none truncate rounded-lg border border-input bg-background pl-3 pr-8 text-[13px]"
-      >
-        {TRANSLATIONS.map((t) => (
-          <option key={t.id} value={t.id}>
-            {t.abbreviation} · {t.name}
-          </option>
-        ))}
-      </select>
-      <ChevronDown
-        aria-hidden
-        className="pointer-events-none absolute right-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground"
-      />
-    </div>
-  );
-}
-
 export function SettingsPage() {
   const t = useT();
   const { prefs, update, resolvedTheme } = usePreferences();
-  const [backups, setBackups] = useState(true);
+  const data = useYourData();
+  const formatDate = useFormatDate();
+  const lastBackup = data.backups[0];
   const [openLicence, setOpenLicence] = useState<string | null>(null);
   const themeLabel = useId();
 
@@ -392,11 +337,42 @@ export function SettingsPage() {
         </Group>
 
         <Group title={t.settings.data}>
-          <Row label={t.settings.backups}>
-            {(id) => <Switch aria-labelledby={id} checked={backups} onCheckedChange={setBackups} />}
+          <Row
+            label={t.settings.backups}
+            hint={
+              !isTauri()
+                ? t.welcome.data.previewOnly
+                : `${t.welcome.data.autoHint} ${lastBackup ? t.welcome.data.lastBackup(formatDate(lastBackup.modifiedAt)) : t.welcome.data.noBackup}`
+            }
+          >
+            {(id) => <Switch aria-labelledby={id} checked={prefs.autoBackup} onCheckedChange={data.setAutoBackup} />}
           </Row>
-          <Row label={t.settings.export} hint="Markdown · JSON">
-            {() => <span className="text-xs text-muted-foreground">{t.settings.sample}</span>}
+          <Row label={t.welcome.data.exportJson} hint={t.welcome.data.exportJsonHint}>
+            {(id) => (
+              <Button variant="outline" size="sm" aria-labelledby={id} disabled={data.busy} onClick={data.exportBackup}>
+                <Download /> {t.welcome.data.exportButton}
+              </Button>
+            )}
+          </Row>
+          <Row label={t.welcome.data.importJson} hint={t.welcome.data.importHint}>
+            {(id) => (
+              <Button variant="outline" size="sm" aria-labelledby={id} disabled={data.busy} onClick={data.importBackup}>
+                <Upload /> {t.welcome.data.importButton}
+              </Button>
+            )}
+          </Row>
+          <Row label={t.welcome.data.exportMarkdown} hint={t.welcome.data.exportMarkdownHint}>
+            {(id) => (
+              <Button
+                variant="outline"
+                size="sm"
+                aria-labelledby={id}
+                disabled={data.busy}
+                onClick={data.exportMarkdown}
+              >
+                <FileText /> {t.welcome.data.exportButton}
+              </Button>
+            )}
           </Row>
         </Group>
 

@@ -1,14 +1,16 @@
 import { cn } from "@starter/ui/lib/utils";
 import { Link, Outlet, useRouterState } from "@tanstack/react-router";
-import { BookOpen, ChartNoAxesColumn, NotebookPen, Search, Settings, Sun } from "lucide-react";
+import { BookOpen, ChartNoAxesColumn, History, ListChecks, NotebookPen, Search, Settings, Sun } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { WeekDots } from "../components/week-dots";
 import { usePreferences, useT } from "../lib/state/preferences";
+import { useAutoBackup } from "../lib/state/use-auto-backup";
 import { useHabits } from "../lib/state/use-habits";
 import logoNight from "../assets/logo-night.png";
 import logoPaper from "../assets/logo-paper.png";
 import logoSepia from "../assets/logo-sepia.png";
+import { Welcome } from "../features/welcome/welcome";
 import { CommandPalette } from "./command-palette";
 
 // The sidebar logo matches the Dock icon for the theme on screen.
@@ -17,7 +19,9 @@ const LOGOS = { paper: logoPaper, sepia: logoSepia, night: logoNight } as const;
 const NAV = [
   { to: "/today", key: "today", icon: Sun },
   { to: "/read", key: "read", icon: BookOpen },
+  { to: "/plans", key: "plans", icon: ListChecks },
   { to: "/study", key: "study", icon: NotebookPen },
+  { to: "/history", key: "history", icon: History },
   { to: "/progress", key: "progress", icon: ChartNoAxesColumn },
 ] as const;
 
@@ -26,6 +30,7 @@ export function AppShell() {
   const t = useT();
   const { prefs, resolvedTheme } = usePreferences();
   const habits = useHabits();
+  useAutoBackup();
   const [paletteOpen, setPaletteOpen] = useState(false);
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   // Focus mode belongs to the reader; every other screen keeps its navigation.
@@ -119,6 +124,7 @@ export function AppShell() {
       </main>
 
       <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
+      <Welcome />
     </div>
   );
 }

@@ -110,21 +110,42 @@ export async function seedSample(api: LocalApi): Promise<void> {
   await new Promise((resolve) => setTimeout(resolve, 5));
   await run(commands.reading.markChapterRead, { chapterVid: v("JHN", 3) });
 
+  // A plan under way: Gospel of John, started six days ago, four days done (so catch-up shows).
+  const plan = await api.run(commands.plans.start, {
+    kind: "builtIn",
+    planKey: "john-21",
+    startedOn: addDays(dayKeyOf(new Date()), -6),
+  });
+  if (plan.ok) for (let day = 1; day <= 4; day++) await run(commands.plans.completeDay, { planId: plan.data.id, day });
+
   const random = seeded(7);
   const today = dayKeyOf(new Date());
+  // Each sample day reads a stretch of a book, so History shows varied chapters.
+  const stretches: Array<[string, number, number, string]> = [
+    ["JHN", 3, 3, "en-bsb"],
+    ["PSA", 23, 24, "en-bsb"],
+    ["ROM", 8, 8, "am-1962-nt"],
+    ["GEN", 1, 2, "en-bsb"],
+    ["MRK", 4, 5, "en-bsb"],
+    ["PHP", 1, 1, "am-1962-nt"],
+    ["PSA", 91, 91, "en-bsb"],
+  ];
   for (let back = 330; back >= 0; back--) {
     // Earlier months are patchier; the last ten days show a steady rhythm with one missed day.
     const reads = back <= 9 ? back !== 4 : random() < 0.58 + (back < 120 ? 0.15 : 0);
     if (!reads) continue;
     const minutes = back === 0 ? 9 : Math.round(4 + random() * 30);
     const endedAt = Date.now() - back * 86_400_000;
+    // Day 0 ends in John 3 so "continue where you left off" matches Today.
+    const [code, from, to, translationId] = stretches[back % stretches.length] ?? ["JHN", 3, 3, "en-bsb"];
     await run(commands.reading.recordSession, {
       startedAt: endedAt - minutes * 60_000,
       endedAt,
       focusedSeconds: minutes * 60,
       localDay: addDays(today, -back),
-      translationId: "en-bsb",
-      vid: v("JHN", 3),
+      translationId,
+      vid: v(code, from, 1),
+      vidFurthest: v(code, to, 10),
     });
   }
 }

@@ -11,6 +11,7 @@ import { useState } from "react";
 
 import { Card, Eyebrow, Page, PageHeader } from "../../components/page";
 import { WeekDots } from "../../components/week-dots";
+import { TodaysReading } from "../plans/todays-reading";
 import type { ChapterData } from "../../lib/bible/source";
 import { useChapter } from "../../lib/bible/use-chapter";
 import { useNow } from "../../lib/state/clock";
@@ -99,6 +100,8 @@ export function TodayPage() {
               </Button>
             </div>
           </Card>
+
+          <TodaysReading />
 
           <Card>
             <Eyebrow>{t.today.continueReading}</Eyebrow>
