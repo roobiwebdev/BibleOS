@@ -43,7 +43,7 @@
   ],
   "overrides": [
     {
-      "files": ["apps/desktop/**"],
+      "files": ["apps/desktop/**", "apps/site/**"],
       "rules": {
         "nextjs/no-img-element": "off",
         "nextjs/no-html-link-for-pages": "off"
