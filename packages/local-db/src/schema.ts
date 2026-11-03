@@ -186,6 +186,60 @@ export const settings = sqliteTable("settings", {
   updatedAt: integer("updated_at").notNull(),
 });
 
+/**
+ * SOURCE OF TRUTH KEYWORDS: plans, planProgress, reading plans, plan days, built-in plan, custom plan
+ * WHAT:  Reading plans the reader has started, and which plan days are done.
+ * WHY:   Built-in plans are defined in code (bible-core plans.ts) and referenced by `plan_key`;
+ *        a custom plan stores its own definition as JSON. Leaving a plan sets `left_at` and keeps
+ *        its progress, so restarting or reviewing it later loses nothing.
+ * WHERE: local-api plan commands; desktop Plans page and Today's reading.
+ */
+export const plans = sqliteTable(
+  "plans",
+  {
+    ...syncColumns(),
+    planKey: text("plan_key").notNull(),
+    title: text("title").notNull(),
+    // JSON plan definition for custom plans; null for built-in plans.
+    definition: text("definition"),
+    startedOn: text("started_on").notNull(),
+    finishedAt: integer("finished_at"),
+    leftAt: integer("left_at"),
+  },
+  (t) => [index("plans_key_idx").on(t.planKey)],
+);
+
+export const planProgress = sqliteTable(
+  "plan_progress",
+  {
+    ...syncColumns(),
+    planId: text("plan_id")
+      .notNull()
+      .references(() => plans.id),
+    day: integer("day").notNull(),
+    completedAt: integer("completed_at").notNull(),
+  },
+  (t) => [uniqueIndex("plan_progress_plan_day_idx").on(t.planId, t.day)],
+);
+
+/**
+ * SOURCE OF TRUTH KEYWORDS: bookmarks, one-click bookmark, saved place
+ * WHAT:  Single bookmarked passages (one click in the reader), optionally labelled.
+ * WHY:   Collections group passages by theme; a bookmark is a quick "keep my place here",
+ *        so it has its own table and never needs a collection to exist.
+ * WHERE: local-api bookmark commands; desktop reader and Bookmarks list.
+ */
+export const bookmarks = sqliteTable(
+  "bookmarks",
+  {
+    ...syncColumns(),
+    startVid: integer("start_vid").notNull(),
+    endVid: integer("end_vid").notNull(),
+    label: text("label").notNull().default(""),
+  },
+  (t) => [index("bookmarks_range_idx").on(t.startVid, t.endVid)],
+);
+
 /** One row per mutation (the audit trail), later the sync outbox. Never holds note contents. */
 export const changeLog = sqliteTable(
   "change_log",

@@ -7,9 +7,7 @@ import { Button } from "@starter/ui/components/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuGroup,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@starter/ui/components/dropdown-menu";
@@ -32,11 +30,22 @@ import {
   Plus,
   X,
 } from "lucide-react";
-import { useEffect, useMemo, useState, useSyncExternalStore, type MouseEvent, type ReactNode } from "react";
+import {
+  Fragment,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  type MouseEvent,
+  type ReactNode,
+} from "react";
 
+import { BookmarkButton } from "../../components/bookmark-button";
 import { HIGHLIGHT_BG } from "../../components/highlight-colors";
-import type { ChapterData, ChapterVerse } from "../../lib/bible/source";
-import { useAvailableChapters, useChapter } from "../../lib/bible/use-chapter";
+import { TranslationMenu } from "../../components/translation-menu";
+import type { ChapterVerse } from "../../lib/bible/source";
+import { useAvailableChapters } from "../../lib/bible/use-chapter";
 import { usePreferences, useT } from "../../lib/state/preferences";
 import { useReadingTimer } from "../../lib/state/use-reading-timer";
 import { HIGHLIGHT_COLORS, useStudy } from "../../lib/state/study-store";
@@ -44,38 +53,7 @@ import { DEFAULT_CHAPTER, readRoute } from "../../router";
 import { ChapterPicker } from "./chapter-picker";
 import { ChapterText, ParallelText, type VerseDecor } from "./chapter-text";
 import { NotesRail } from "./notes-rail";
-
-function TranslationPicker({ value, onChange }: { value: string; onChange: (id: string) => void }) {
-  const current = TRANSLATIONS.find((t) => t.id === value);
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild nativeButton>
-        <Button variant="ghost" size="sm" className="gap-1 font-semibold">
-          {current?.abbreviation ?? value}
-          <ChevronDown className="size-3 opacity-60" />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-72">
-        {(["am", "en"] as const).map((lang, i) => (
-          // Base UI requires a group label to sit inside a menu group.
-          <DropdownMenuGroup key={lang}>
-            {i > 0 && <DropdownMenuSeparator />}
-            <DropdownMenuLabel>{lang === "am" ? "አማርኛ · Amharic" : "English"}</DropdownMenuLabel>
-            {TRANSLATIONS.filter((t) => t.language === lang).map((t) => (
-              <DropdownMenuItem key={t.id} onClick={() => onChange(t.id)} className="gap-2">
-                <span className="w-9 text-xs font-semibold text-muted-foreground">{t.abbreviation}</span>
-                <span lang={t.language} className="flex-1 truncate">
-                  {t.name}
-                </span>
-                {t.id === value && <Check className="size-3.5" />}
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuGroup>
-        ))}
-      </DropdownMenuContent>
-    </DropdownMenu>
-  );
-}
+import { adjacentChapter, useChapterWindow, type WindowChapter } from "./use-chapter-window";
 
 function IconToggle({
   label,
@@ -107,24 +85,6 @@ function IconToggle({
   );
 }
 
-/**
- * When a translation lacks this book (the 1962 Amharic text is New Testament only), show a
- * full translation in the same language instead, and say so.
- */
-function useWithFallback(id: string, chapterId: VerseId) {
-  const meta = TRANSLATIONS.find((x) => x.id === id);
-  const fallbackId =
-    TRANSLATIONS.find((x) => x.language === meta?.language && x.scope === "bible" && x.id !== id)?.id ?? id;
-  const own = useChapter(id, chapterId);
-  const fallback = useChapter(fallbackId, chapterId);
-  const missing = own !== undefined && own.verses.length === 0 && fallbackId !== id;
-  return {
-    data: missing ? fallback : own,
-    id: missing ? fallbackId : id,
-    replaced: missing ? { missing: meta, shown: TRANSLATIONS.find((x) => x.id === fallbackId) } : undefined,
-  };
-}
-
 const NARROW = "(max-width: 1180px)";
 /** True when the window is too narrow to keep the notes rail beside the text. */
 function useNarrow(): boolean {
@@ -142,45 +102,137 @@ const isTyping = (target: EventTarget | null) =>
   target instanceof HTMLElement &&
   (target.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName));
 
+/** A chapter counts as read after this long on screen, so scrolling past it does not. */
+const MARK_READ_AFTER_MS = 2_000;
+
+/**
+ * SOURCE OF TRUTH KEYWORDS: ChapterSection, continuous reader chapter, chapter block, fallback notice
+ * WHAT:  One chapter inside the continuous reader: book and chapter heading, the fallback
+ *        notice when a translation lacks the book, and the text (single or parallel).
+ * WHY:   Each mounted chapter carries its own translations and notices, so the Old Testament
+ *        fallback appears exactly on the chapters it applies to.
+ * WHERE: reader page.
+ */
+function ChapterSection({
+  chapter,
+  parallel,
+  decor,
+}: {
+  chapter: WindowChapter;
+  parallel: boolean;
+  decor: VerseDecor;
+}) {
+  const t = useT();
+  const { prefs } = usePreferences();
+  const { ord, chapter: number } = splitVerseId(chapter.vid);
+  const book = bookByOrd(ord);
+  const mainMeta = TRANSLATIONS.find((x) => x.id === chapter.main.id);
+  const secondMeta = TRANSLATIONS.find((x) => x.id === chapter.second?.id);
+  const second = parallel ? chapter.second : undefined;
+  const rows = useMemo(
+    () => (second ? alignParallel([chapter.main.data.verses, second.data.verses]) : []),
+    [chapter.main, second],
+  );
+  const notices = [chapter.main.replaced, second?.replaced].filter((x) => x !== undefined);
+  const title = `${book?.[prefs.locale].short ?? ""} ${number}`;
+
+  return (
+    <article data-chapter={chapter.vid} aria-label={title} className="pb-16 pt-12">
+      <div className="mb-10 text-center">
+        <p className="eyebrow font-sans">{book?.[prefs.locale].name}</p>
+        <p className="mt-2 font-reading text-5xl font-light tabular">{number}</p>
+      </div>
+      {notices.map((n) => (
+        <p
+          key={n.missing?.id}
+          className="mx-auto mb-6 max-w-xl rounded-lg bg-muted px-3 py-2 text-center font-sans text-xs text-muted-foreground"
+        >
+          {t.read.fallback(n.missing?.abbreviation ?? "", n.shown?.name ?? "")}
+        </p>
+      ))}
+      <div role="document" aria-describedby="reader-hint" aria-label={title}>
+        {second ? (
+          <>
+            <div className="mb-6 hidden grid-cols-2 gap-x-12 border-b pb-2 font-sans text-xs font-medium text-muted-foreground @3xl:grid">
+              <span lang={mainMeta?.language}>{mainMeta?.name}</span>
+              <span lang={secondMeta?.language}>{secondMeta?.name}</span>
+            </div>
+            <ParallelText
+              rows={rows}
+              langs={[mainMeta?.language ?? "en", secondMeta?.language ?? "en"]}
+              headings={chapter.main.data.headings}
+              decor={decor}
+              emptyLabel="—"
+            />
+          </>
+        ) : (
+          <ChapterText
+            verses={chapter.main.data.verses}
+            headings={chapter.main.data.headings}
+            lang={mainMeta?.language ?? "en"}
+            decor={decor}
+          />
+        )}
+      </div>
+    </article>
+  );
+}
+
 export function ReaderPage() {
   const t = useT();
   const { prefs, update } = usePreferences();
   const study = useStudy();
   const navigate = useNavigate();
   const search = readRoute.useSearch();
-  const chapterId = chapterOf(search.c ?? study.lastRead ?? DEFAULT_CHAPTER);
-  const { ord, chapter } = splitVerseId(chapterId);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const win = useChapterWindow(scrollRef, {
+    main: prefs.mainTranslation,
+    second: prefs.parallelTranslation,
+    parallel: prefs.parallel,
+  });
+
+  // The chapter the URL asks for; the chapter on screen (`current`) follows scrolling.
+  const urlChapter = chapterOf(search.c ?? study.lastRead ?? DEFAULT_CHAPTER);
+  const current = win.inView ?? urlChapter;
+  const { ord, chapter } = splitVerseId(current);
   const book = bookByOrd(ord);
+  const currentChapter = win.chapters.find((c) => c.vid === current);
   const available = useAvailableChapters();
   const [pickerOpen, setPickerOpen] = useState(false);
   const narrow = useNarrow();
   // On narrow windows the rail floats over the text, so it opens only when asked for.
   const [overlayRail, setOverlayRail] = useState(false);
+  const mainMeta = TRANSLATIONS.find((x) => x.id === (currentChapter?.main.id ?? prefs.mainTranslation));
+  const inPreview = available === undefined || available.includes(urlChapter);
 
-  const main = useWithFallback(prefs.mainTranslation, chapterId);
-  const second = useWithFallback(prefs.parallelTranslation, chapterId);
-  const mainMeta = TRANSLATIONS.find((x) => x.id === main.id);
-  const secondMeta = TRANSLATIONS.find((x) => x.id === second.id);
-  const mainData: ChapterData | undefined = main.data;
-  const secondData: ChapterData | undefined = second.data;
-  const verses: ChapterVerse[] = useMemo(() => mainData?.verses ?? [], [mainData]);
-  const inPreview = available === undefined || available.includes(chapterId);
+  // Every mounted verse in reading order, so the keyboard cursor flows across chapters.
+  const verses: ChapterVerse[] = useMemo(() => win.chapters.flatMap((c) => c.main.data.verses), [win.chapters]);
 
-  // A pick belongs to the chapter and link it was made on; moving elsewhere clears it.
-  // Without a pick, a verse in the link (?v=) is selected.
-  const pickKey = `${chapterId}:${search.v ?? ""}`;
-  const [picked, setPicked] = useState<{ key: string; range: VerseRange | null } | null>(null);
-  const linkedVid = search.v ? makeVerseId(ord, chapter, search.v) : undefined;
+  // Picks, the keyboard cursor and a draft belong to the navigation they were made in: scrolling
+  // keeps them, opening another chapter or link starts a new navigation and clears them.
+  // The reader's own URL updates (the chapter in view) are not navigations.
+  const waitForLastRead = search.c === undefined && !study.ready;
+  const urlParts = splitVerseId(urlChapter);
+  const linkedVid = search.v ? makeVerseId(urlParts.ord, urlParts.chapter, search.v) : undefined;
+  const urlKey = `${urlChapter}:${search.v ?? ""}`;
+  const [nav, setNav] = useState<{ url: string; n: number; chapter: VerseId; linked?: VerseId }>({
+    url: "",
+    n: 0,
+    chapter: urlChapter,
+  });
+  if (!waitForLastRead && inPreview && nav.url !== urlKey) {
+    const own = urlChapter === win.inView && linkedVid === undefined;
+    setNav(own ? { ...nav, url: urlKey } : { url: urlKey, n: nav.n + 1, chapter: urlChapter, linked: linkedVid });
+  }
+  const [picked, setPicked] = useState<{ key: number; range: VerseRange | null } | null>(null);
+  // Without a pick, the verse in the link (?v=) that opened this navigation is selected.
   const selection: VerseRange | null =
-    picked?.key === pickKey ? picked.range : linkedVid ? { start: linkedVid, end: linkedVid } : null;
-
-  const [cursorState, setCursorState] = useState<{ key: string; vid: VerseId } | null>(null);
-  const cursor = cursorState?.key === pickKey ? cursorState.vid : null;
-
-  // The note being written keeps the passage it was started on, and closes on another chapter.
-  const [draftState, setDraftState] = useState<{ chapterId: VerseId; anchors: VerseRange[] } | null>(null);
-  const draft = draftState?.chapterId === chapterId ? draftState.anchors : null;
-  const setDraft = (anchors: VerseRange[] | null) => setDraftState(anchors ? { chapterId, anchors } : null);
+    picked?.key === nav.n ? picked.range : nav.linked ? { start: nav.linked, end: nav.linked } : null;
+  const [cursorState, setCursorState] = useState<{ key: number; vid: VerseId } | null>(null);
+  const cursor = cursorState?.key === nav.n ? cursorState.vid : null;
+  const [draftState, setDraftState] = useState<{ key: number; anchors: VerseRange[] } | null>(null);
+  const draft = draftState?.key === nav.n ? draftState.anchors : null;
+  const setDraft = (anchors: VerseRange[] | null) => setDraftState(anchors ? { key: nav.n, anchors } : null);
 
   const showRail = !prefs.focusMode && (narrow ? overlayRail : prefs.notesRail);
   const openRail = () => (narrow ? setOverlayRail(true) : update({ notesRail: true, focusMode: false }));
@@ -188,45 +240,40 @@ export function ReaderPage() {
   const [copied, setCopied] = useState(false);
   const [announcement, setAnnouncement] = useState("");
 
-  // Time on this chapter counts toward the day's reading once the text is on screen.
-  useReadingTimer(chapterId, main.id, verses.length > 0);
+  // Each navigation scrolls to its chapter (and verse), or opens a new window of chapters there.
+  const { jumpTo, inView } = win;
+  const jumped = useRef(0);
+  useEffect(() => {
+    if (nav.n === 0 || jumped.current === nav.n) return;
+    jumped.current = nav.n;
+    void jumpTo(nav.chapter, nav.linked);
+  }, [nav, jumpTo]);
 
+  // Reader → URL: the chapter in view becomes the chapter in the link, without a history entry.
+  const reportedInView = useRef<VerseId | undefined>(undefined);
+  useEffect(() => {
+    if (inView === undefined || reportedInView.current === inView) return;
+    reportedInView.current = inView;
+    if (inView !== urlChapter) void navigate({ to: "/read", search: { c: inView }, replace: true });
+  }, [inView, urlChapter, navigate]);
+
+  // Time counts against the chapter on screen; it is marked read after a short stay, not a fly-by.
+  const loaded = (currentChapter?.main.data.verses.length ?? 0) > 0;
+  useReadingTimer(current, currentChapter?.main.id ?? prefs.mainTranslation, loaded);
   const { markRead } = study;
   useEffect(() => {
-    if (verses.length > 0) markRead(chapterId);
-  }, [verses.length, chapterId, markRead]);
+    if (!loaded) return;
+    const timer = setTimeout(() => markRead(current), MARK_READ_AFTER_MS);
+    return () => clearTimeout(timer);
+  }, [loaded, current, markRead]);
 
-  // Scroll a linked verse (from the palette or a note) into view once its chapter is on screen.
-  useEffect(() => {
-    if (!linkedVid || verses.length === 0) return;
-    const target = verses.find((x) => x.vid <= linkedVid && x.spanEnd >= linkedVid)?.vid ?? linkedVid;
-    const smooth = !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    requestAnimationFrame(() =>
-      document
-        .querySelector(`[data-vid="${target}"]`)
-        ?.scrollIntoView({ block: "center", behavior: smooth ? "smooth" : "auto" }),
-    );
-  }, [linkedVid, verses]);
-
-  const go = (delta: number) => {
-    if (!book) return;
-    let nextOrd = ord;
-    let nextChapter = chapter + delta;
-    if (nextChapter < 1) {
-      const prevBook = bookByOrd(ord - 1);
-      if (!prevBook) return;
-      nextOrd = prevBook.ord;
-      nextChapter = prevBook.chapters;
-    } else if (nextChapter > book.chapters) {
-      if (!bookByOrd(ord + 1)) return;
-      nextOrd = ord + 1;
-      nextChapter = 1;
-    }
-    void navigate({ to: "/read", search: { c: makeVerseId(nextOrd, nextChapter) } });
+  const go = (delta: 1 | -1) => {
+    const next = adjacentChapter(current, delta);
+    if (next !== undefined) void navigate({ to: "/read", search: { c: next } });
   };
 
   const select = (range: VerseRange | null) => {
-    setPicked({ key: pickKey, range });
+    setPicked({ key: nav.n, range });
     setAnnouncement(range ? t.read.selected(formatRange(range, prefs.locale)) : "");
   };
 
@@ -235,10 +282,15 @@ export function ReaderPage() {
     const onKey = (e: KeyboardEvent) => {
       if (isTyping(e.target) || e.metaKey || e.ctrlKey || e.altKey || document.querySelector("[role=dialog]")) return;
       const index = cursor === null ? -1 : verses.findIndex((v) => v.vid <= cursor && cursor <= v.spanEnd);
+      // Without a cursor, start from the chapter on screen rather than the top of the window.
+      const first = Math.max(
+        0,
+        verses.findIndex((v) => chapterOf(v.vid) === current),
+      );
       const moveTo = (i: number) => {
         const verse = verses[Math.max(0, Math.min(verses.length - 1, i))];
         if (!verse) return;
-        setCursorState({ key: pickKey, vid: verse.vid });
+        setCursorState({ key: nav.n, vid: verse.vid });
         document.querySelector(`[data-vid="${verse.vid}"]`)?.scrollIntoView({ block: "nearest" });
         if (e.shiftKey) {
           // Extend from the current selection, or from the verse the cursor was on.
@@ -251,12 +303,12 @@ export function ReaderPage() {
         case "ArrowDown":
         case "j":
           e.preventDefault();
-          moveTo(index + 1);
+          moveTo(index < 0 ? first : index + 1);
           break;
         case "ArrowUp":
         case "k":
           e.preventDefault();
-          moveTo(index < 0 ? 0 : index - 1);
+          moveTo(index < 0 ? first : index - 1);
           break;
         case " ":
         case "Enter": {
@@ -281,7 +333,7 @@ export function ReaderPage() {
         case "n":
           e.preventDefault();
           openRail();
-          setDraft([selection ?? chapterRange(chapterId)]);
+          setDraft([selection ?? chapterRange(current)]);
           break;
         default:
       }
@@ -298,7 +350,7 @@ export function ReaderPage() {
       study.notes.some((n) => n.anchors.some((a) => a.start >= verse.vid && a.start <= verse.spanEnd)),
     onVerseClick: (verse: ChapterVerse, event: MouseEvent) => {
       const clicked = { start: verse.vid, end: verse.spanEnd };
-      setCursorState({ key: pickKey, vid: verse.vid });
+      setCursorState({ key: nav.n, vid: verse.vid });
       if (event.shiftKey && selection) {
         select({ start: Math.min(selection.start, clicked.start), end: Math.max(selection.end, clicked.end) });
       } else if (selection && selection.start === clicked.start && selection.end === clicked.end) {
@@ -308,11 +360,6 @@ export function ReaderPage() {
       }
     },
   };
-
-  const rows = useMemo(
-    () => (mainData && secondData ? alignParallel([mainData.verses, secondData.verses]) : []),
-    [mainData, secondData],
-  );
 
   const selectionLabel = selection ? formatRange(selection, prefs.locale) : "";
   const selectedText = () =>
@@ -324,7 +371,6 @@ export function ReaderPage() {
       : "";
 
   const otherLocale = prefs.locale === "am" ? "en" : "am";
-  const notices = [main.replaced, prefs.parallel ? second.replaced : undefined].filter((x) => x !== undefined);
 
   return (
     <div className="relative flex h-full">
@@ -359,13 +405,14 @@ export function ReaderPage() {
             </button>
           </h1>
           <div className="ml-auto flex shrink-0 items-center gap-0.5">
-            <TranslationPicker value={prefs.mainTranslation} onChange={(id) => update({ mainTranslation: id })} />
+            <BookmarkButton range={selection ?? chapterRange(current)} />
+            <TranslationMenu value={prefs.mainTranslation} onChange={(id) => update({ mainTranslation: id })} />
             {prefs.parallel && (
               <>
                 <span aria-hidden className="text-muted-foreground">
                   ·
                 </span>
-                <TranslationPicker
+                <TranslationMenu
                   value={prefs.parallelTranslation}
                   onChange={(id) => update({ parallelTranslation: id })}
                 />
@@ -392,10 +439,16 @@ export function ReaderPage() {
           </div>
         </header>
 
-        <div className="flex-1 overflow-y-auto" onClick={(e) => e.target === e.currentTarget && select(null)}>
-          <div className={cn("mx-auto px-6 pb-40 pt-12 @2xl:px-10", prefs.parallel ? "max-w-6xl" : "reading-column")}>
+        <div
+          ref={scrollRef}
+          data-reader-scroll
+          onScroll={win.onScroll}
+          className="flex-1 overflow-y-auto"
+          onClick={(e) => e.target === e.currentTarget && select(null)}
+        >
+          <div className={cn("mx-auto px-6 pb-40 @2xl:px-10", prefs.parallel ? "max-w-6xl" : "reading-column")}>
             {!inPreview ? (
-              <div className="mx-auto max-w-md pt-16 text-center font-sans text-base">
+              <div className="mx-auto max-w-md pt-28 text-center font-sans text-base">
                 <p className="text-muted-foreground">{t.read.notInPreview}</p>
                 <div className="mt-6 flex flex-wrap justify-center gap-2">
                   {available?.map((c) => {
@@ -415,57 +468,17 @@ export function ReaderPage() {
               </div>
             ) : (
               <>
-                <div className="mb-10 text-center">
-                  <p className="eyebrow font-sans">{book?.[prefs.locale].name}</p>
-                  <p className="mt-2 font-reading text-5xl font-light tabular">{chapter}</p>
-                </div>
-                {notices.map((n) => (
-                  <p
-                    key={n.missing?.id}
-                    className="mx-auto mb-6 max-w-xl rounded-lg bg-muted px-3 py-2 text-center font-sans text-xs text-muted-foreground"
-                  >
-                    {t.read.fallback(n.missing?.abbreviation ?? "", n.shown?.name ?? "")}
-                  </p>
+                {win.chapters.map((c, i) => (
+                  <Fragment key={c.vid}>
+                    {i > 0 && <hr aria-hidden className="mx-auto w-24 border-border" />}
+                    <ChapterSection chapter={c} parallel={prefs.parallel} decor={decor} />
+                  </Fragment>
                 ))}
-                <div
-                  role="document"
-                  aria-describedby="reader-hint"
-                  aria-label={`${book?.[prefs.locale].short ?? ""} ${chapter}`}
-                >
-                  {prefs.parallel ? (
-                    <>
-                      <div className="mb-6 hidden grid-cols-2 gap-x-12 border-b pb-2 font-sans text-xs font-medium text-muted-foreground @3xl:grid">
-                        <span lang={mainMeta?.language}>{mainMeta?.name}</span>
-                        <span lang={secondMeta?.language}>{secondMeta?.name}</span>
-                      </div>
-                      <ParallelText
-                        rows={rows}
-                        langs={[mainMeta?.language ?? "en", secondMeta?.language ?? "en"]}
-                        headings={mainData?.headings ?? []}
-                        decor={decor}
-                        emptyLabel="—"
-                      />
-                    </>
-                  ) : (
-                    <ChapterText
-                      verses={verses}
-                      headings={mainData?.headings ?? []}
-                      lang={mainMeta?.language ?? "en"}
-                      decor={decor}
-                    />
-                  )}
-                </div>
-                <p id="reader-hint" className="mt-10 text-center font-sans text-[11px] text-muted-foreground">
-                  {t.read.keyboardHint}
-                </p>
-                <div className="mt-8 flex justify-between border-t pt-6 font-sans text-sm">
-                  <Button variant="ghost" onClick={() => go(-1)}>
-                    <ChevronLeft /> {t.read.previous}
-                  </Button>
-                  <Button variant="ghost" onClick={() => go(1)}>
-                    {t.read.next} <ChevronRight />
-                  </Button>
-                </div>
+                {win.chapters.length > 0 && (
+                  <p id="reader-hint" className="mt-4 text-center font-sans text-[11px] text-muted-foreground">
+                    {t.read.keyboardHint}
+                  </p>
+                )}
               </>
             )}
           </div>
@@ -570,7 +583,7 @@ export function ReaderPage() {
         )}
       </section>
 
-      {showRail && <NotesRail scope={selection ?? chapterRange(chapterId)} draft={draft} onDraftChange={setDraft} />}
+      {showRail && <NotesRail scope={selection ?? chapterRange(current)} draft={draft} onDraftChange={setDraft} />}
 
       <ChapterPicker open={pickerOpen} onOpenChange={setPickerOpen} current={{ ord, chapter }} available={available} />
     </div>

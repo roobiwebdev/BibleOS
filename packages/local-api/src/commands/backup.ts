@@ -1,4 +1,5 @@
 import {
+  bookmarks,
   chapterReads,
   collectionItems,
   collections,
@@ -8,6 +9,8 @@ import {
   noteLinks,
   notes,
   noteTags,
+  planProgress,
+  plans,
   readingSessions,
   settings,
   tags,
@@ -15,9 +18,12 @@ import {
 import { createSelectSchema } from "drizzle-orm/zod";
 import { z } from "zod";
 
+import { PLAN_KEYS } from "@starter/bible-core/plans";
+
 import { CommandError, defineCommand } from "../command";
 import { dayKeySchema, highlightColorSchema, LIMITS, noteKindSchema } from "../schemas";
 import * as backupService from "../services/backup";
+import { CUSTOM_PLAN_KEY, planDefinitionSchema } from "./plans";
 
 export const BACKUP_FORMAT = "bibleos-study-backup";
 export const BACKUP_VERSION = 1;
@@ -59,6 +65,17 @@ export const backupSchema = z.object({
     chapterReads: rows(createSelectSchema(chapterReads)),
     goals: rows(createSelectSchema(goals)),
     settings: rows(createSelectSchema(settings, { key: (s) => s.max(64), value: (s) => s.max(100_000) })),
+    // Added after the first release; older backups without them import as empty lists.
+    plans: rows(
+      createSelectSchema(plans, {
+        planKey: (s) => s.max(64),
+        title: (s) => s.max(LIMITS.title),
+        definition: (s) => s.max(200_000),
+        startedOn: dayKeySchema,
+      }),
+    ),
+    planProgress: rows(createSelectSchema(planProgress)),
+    bookmarks: rows(createSelectSchema(bookmarks, { label: (s) => s.max(LIMITS.title) })),
   }),
 });
 export type StudyBackup = z.output<typeof backupSchema>;
@@ -94,15 +111,29 @@ function assertReferences(data: StudyBackup["data"]): void {
   const noteIds = new Set(data.notes.map((n) => n.id));
   const tagIds = new Set(data.tags.map((t) => t.id));
   const collectionIds = new Set(data.collections.map((c) => c.id));
+  const planIds = new Set(data.plans.map((p) => p.id));
   const orphan =
     data.noteAnchors.some((a) => !noteIds.has(a.noteId)) ||
     data.noteTags.some((t) => !noteIds.has(t.noteId) || !tagIds.has(t.tagId)) ||
     data.noteLinks.some((l) => !noteIds.has(l.fromNoteId)) ||
-    data.collectionItems.some((i) => !collectionIds.has(i.collectionId));
+    data.collectionItems.some((i) => !collectionIds.has(i.collectionId)) ||
+    data.planProgress.some((p) => !planIds.has(p.planId));
+  // A plan is either a known built-in plan or a custom plan with a valid definition.
+  const knownKeys = new Set<string>([...PLAN_KEYS, CUSTOM_PLAN_KEY]);
+  const badPlan = data.plans.some((p) => {
+    if (!knownKeys.has(p.planKey)) return true;
+    if (p.definition === null) return p.planKey === CUSTOM_PLAN_KEY;
+    try {
+      return !planDefinitionSchema.safeParse(JSON.parse(p.definition)).success;
+    } catch {
+      return true;
+    }
+  });
+  if (badPlan) throw new CommandError("INVALID_INPUT", "The backup file has a reading plan this version can't read.");
   if (orphan)
     throw new CommandError(
       "INVALID_INPUT",
-      "The backup file is incomplete: some rows point at missing notes, tags or collections.",
+      "The backup file is incomplete: some rows point at missing notes, tags, collections or plans.",
     );
 }
 
@@ -195,6 +226,9 @@ export const backupCommands = {
       await upsert("highlights", highlights, data.highlights);
       await upsert("readingSessions", readingSessions, data.readingSessions);
       await upsert("goals", goals, data.goals);
+      await upsert("plans", plans, data.plans);
+      await upsert("planProgress", planProgress, data.planProgress);
+      await upsert("bookmarks", bookmarks, data.bookmarks);
       changed.settings = await backupService.upsertRows(ctx.executor, settings, data.settings, {
         key: "key",
         newerWins: true,

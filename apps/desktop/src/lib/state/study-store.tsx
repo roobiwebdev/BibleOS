@@ -3,6 +3,7 @@ import type { SessionLike } from "@starter/bible-core/habits";
 import { overlaps, type VerseRange } from "@starter/bible-core/range";
 import { chapterOf, type VerseId } from "@starter/bible-core/verse-id";
 import { commands } from "@starter/local-api/api";
+import type { Bookmark } from "@starter/local-api/commands/bookmarks";
 import type { Collection } from "@starter/local-api/commands/collections";
 import type { Highlight } from "@starter/local-api/commands/highlights";
 import type { Note } from "@starter/local-api/commands/notes";
@@ -14,7 +15,7 @@ import { callCommand, CommandFailedError } from "../data/local-api";
 import { useToday } from "./clock";
 
 export { HIGHLIGHT_COLORS, overlaps };
-export type { Collection, Highlight, HighlightColor, Note, VerseRange };
+export type { Bookmark, Collection, Highlight, HighlightColor, Note, VerseRange };
 
 /** What the note editor hands back: a new note, or an edit when `id` is set. */
 export interface NoteDraft {
@@ -32,6 +33,8 @@ export interface StudyState {
   highlights: Highlight[];
   notes: Note[];
   collections: Collection[];
+  /** Bookmarked passages, newest first. */
+  bookmarks: Bookmark[];
   /** One entry per day with reading, for the habit engine. */
   sessions: SessionLike[];
   chaptersRead: Set<VerseId>;
@@ -46,6 +49,11 @@ interface StudyContext extends StudyState {
   deleteNote: (id: string) => () => void;
   addToCollection: (collectionId: string, range: VerseRange) => void;
   createCollection: (name: string, first?: VerseRange) => void;
+  /** Adds a bookmark on exactly this range, or removes the one already there. */
+  toggleBookmark: (range: VerseRange) => void;
+  renameBookmark: (id: string, label: string) => void;
+  /** Removes a bookmark and returns a function that puts it back (for Undo). */
+  removeBookmark: (id: string) => () => void;
   markRead: (chapterId: VerseId) => void;
   /** Stores a stretch of focused reading time. */
   recordReading: (session: {
@@ -71,7 +79,7 @@ function reportFailure(error: unknown) {
 }
 
 /**
- * SOURCE OF TRUTH KEYWORDS: StudyProvider, useStudy, study store, highlights, notes, collections, reading history
+ * SOURCE OF TRUTH KEYWORDS: StudyProvider, useStudy, study store, highlights, notes, collections, bookmarks, reading history
  * WHAT:  The reader's study data, loaded from the study database through local-api commands,
  *        with actions that run a command and then refresh what it changed.
  * WHY:   Screens keep one simple interface while all reads and writes pass the command
@@ -86,6 +94,7 @@ export function StudyProvider({ children }: { children: ReactNode }) {
     highlights: [],
     notes: [],
     collections: [],
+    bookmarks: [],
     sessions: [],
     chaptersRead: new Set(),
     lastRead: DEFAULT_LAST_READ,
@@ -112,6 +121,10 @@ export function StudyProvider({ children }: { children: ReactNode }) {
     const collections = await callCommand(commands.collections.list, {});
     setState((s) => ({ ...s, collections }));
   }, []);
+  const loadBookmarks = useCallback(async () => {
+    const bookmarks = await callCommand(commands.bookmarks.list, {});
+    setState((s) => ({ ...s, bookmarks }));
+  }, []);
   const loadReading = useCallback(async () => {
     const reading = await fetchReading();
     setState((s) => ({ ...s, ...reading }));
@@ -121,13 +134,14 @@ export function StudyProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let live = true;
     const load = async () => {
-      const [highlights, notes, collections, reading] = await Promise.all([
+      const [highlights, notes, collections, bookmarks, reading] = await Promise.all([
         callCommand(commands.highlights.list, { range: EVERYTHING }),
         callCommand(commands.notes.list, { includeDeleted: false, limit: 1000 }),
         callCommand(commands.collections.list, {}),
+        callCommand(commands.bookmarks.list, {}),
         fetchReading(),
       ]);
-      if (live) setState({ ready: true, highlights, notes, collections, ...reading });
+      if (live) setState({ ready: true, highlights, notes, collections, bookmarks, ...reading });
     };
     load().catch(reportFailure);
     return () => {
@@ -157,6 +171,12 @@ export function StudyProvider({ children }: { children: ReactNode }) {
         act(() => callCommand(commands.collections.addItem, { collectionId, range }), loadCollections),
       createCollection: (name, first) =>
         act(() => callCommand(commands.collections.create, { name, first }), loadCollections),
+      toggleBookmark: (range) => act(() => callCommand(commands.bookmarks.toggle, { range }), loadBookmarks),
+      renameBookmark: (id, label) => act(() => callCommand(commands.bookmarks.rename, { id, label }), loadBookmarks),
+      removeBookmark: (id) => {
+        act(() => callCommand(commands.bookmarks.remove, { id }), loadBookmarks);
+        return () => act(() => callCommand(commands.bookmarks.restore, { id }), loadBookmarks);
+      },
       markRead: (chapterId) =>
         act(() => callCommand(commands.reading.markChapterRead, { chapterVid: chapterOf(chapterId) }), loadReading),
       recordReading: (s) =>
@@ -173,7 +193,7 @@ export function StudyProvider({ children }: { children: ReactNode }) {
           loadReading,
         ),
     }),
-    [act, loadHighlights, loadNotes, loadCollections, loadReading],
+    [act, loadHighlights, loadNotes, loadCollections, loadBookmarks, loadReading],
   );
 
   const value = useMemo<StudyContext>(() => ({ ...state, ...actions }), [state, actions]);

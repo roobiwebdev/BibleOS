@@ -2,6 +2,7 @@ import type { StudyDb } from "@starter/local-db/drizzle";
 import { toSqlValue } from "@starter/local-db/drizzle";
 import type { SqliteExecutor } from "@starter/local-db/executor";
 import {
+  bookmarks,
   chapterReads,
   collectionItems,
   collections,
@@ -9,8 +10,10 @@ import {
   highlights,
   noteAnchors,
   noteLinks,
-  notes,
   noteTags,
+  notes,
+  planProgress,
+  plans,
   readingSessions,
   settings,
   tags,
@@ -42,6 +45,9 @@ export async function exportTables(db: StudyDb) {
     chapterReads: await db.select().from(chapterReads).orderBy(asc(chapterReads.id)),
     goals: await db.select().from(goals).orderBy(asc(goals.id)),
     settings: await db.select().from(settings).orderBy(asc(settings.key)),
+    plans: await db.select().from(plans).orderBy(asc(plans.id)),
+    planProgress: await db.select().from(planProgress).orderBy(asc(planProgress.id)),
+    bookmarks: await db.select().from(bookmarks).orderBy(asc(bookmarks.id)),
   };
 }
 
