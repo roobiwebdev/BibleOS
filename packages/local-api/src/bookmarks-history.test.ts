@@ -101,20 +101,20 @@ describe("bookmarks", () => {
   });
 });
 
-describe("reading.history", () => {
-  const session = (day: string, minutes: number, vid: number, furthest = vid, translationId = "en-bsb") => {
-    const endedAt = clock + 60_000;
-    return run(commands.reading.recordSession, {
-      startedAt: endedAt - minutes * 60_000,
-      endedAt,
-      focusedSeconds: minutes * 60,
-      localDay: day,
-      translationId,
-      vid,
-      vidFurthest: furthest,
-    });
-  };
+const session = (day: string, minutes: number, vid: number, furthest = vid, translationId = "en-bsb") => {
+  const endedAt = clock + 60_000;
+  return run(commands.reading.recordSession, {
+    startedAt: endedAt - minutes * 60_000,
+    endedAt,
+    focusedSeconds: minutes * 60,
+    localDay: day,
+    translationId,
+    vid,
+    vidFurthest: furthest,
+  });
+};
 
+describe("reading.history", () => {
   it("groups sessions by day, newest first, with chapters touched and minutes", async () => {
     ok(await session("2026-10-30", 10, v("GEN", 1, 1)));
     ok(await session("2026-11-01", 12, v("JHN", 3, 1), v("JHN", 4, 10)));

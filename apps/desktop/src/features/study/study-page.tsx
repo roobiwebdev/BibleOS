@@ -6,10 +6,13 @@ import { TRANSLATIONS } from "@starter/bible-data/manifest";
 import { Button } from "@starter/ui/components/button";
 import { Input } from "@starter/ui/components/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@starter/ui/components/tabs";
+import { useForm } from "@tanstack/react-form";
 import { cn } from "@starter/ui/lib/utils";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { ArrowUpRight, Plus, Search } from "lucide-react";
+import { ArrowRight, ArrowUpRight, Pencil, Plus, Search, Trash2 } from "lucide-react";
 import { useMemo, useState } from "react";
+import { toast } from "sonner";
+import { z } from "zod";
 
 import { HIGHLIGHT_BG } from "../../components/highlight-colors";
 import { linkedReferences, NoteBody } from "../../components/note-body";
@@ -18,14 +21,14 @@ import { Page, PageHeader } from "../../components/page";
 import { useChapter } from "../../lib/bible/use-chapter";
 import { useFormatDate } from "../../lib/format";
 import { usePreferences, useT } from "../../lib/state/preferences";
-import { HIGHLIGHT_COLORS, useStudy, type HighlightColor, type Note } from "../../lib/state/study-store";
+import { HIGHLIGHT_COLORS, useStudy, type Bookmark, type HighlightColor, type Note } from "../../lib/state/study-store";
 import { studyRoute } from "../../router";
 
 /**
  * SOURCE OF TRUTH KEYWORDS: PassageText, passage text, verse text for a range
  * WHAT:  The text of a verse range in the reader's main translation, with its language set.
  * WHY:   Study lists show the words themselves, not just references.
- * WHERE: Study notes, highlights and collections.
+ * WHERE: Study notes, highlights, collections and bookmarks.
  */
 function PassageText({ range, className }: { range: VerseRange; className?: string }) {
   const { prefs } = usePreferences();
@@ -331,7 +334,120 @@ function CollectionsTab() {
   );
 }
 
-const TABS = ["notes", "highlights", "collections", "journal"] as const;
+const bookmarkNameSchema = z.object({ label: z.string().max(200) });
+
+/** Inline rename form for one bookmark: Enter saves, Escape cancels. */
+function BookmarkRename({ bookmark, onDone }: { bookmark: Bookmark; onDone: () => void }) {
+  const t = useT();
+  const study = useStudy();
+  const form = useForm({
+    defaultValues: { label: bookmark.label },
+    validators: { onSubmit: bookmarkNameSchema },
+    onSubmit: ({ value }) => {
+      const label = value.label.trim();
+      if (label !== bookmark.label) study.renameBookmark(bookmark.id, label);
+      onDone();
+    },
+  });
+  return (
+    <form
+      className="flex items-center gap-2"
+      onSubmit={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        void form.handleSubmit();
+      }}
+      onKeyDown={(e) => {
+        if (e.key === "Escape") onDone();
+      }}
+    >
+      <form.Field name="label">
+        {(field) => (
+          <Input
+            autoFocus
+            aria-label={t.history.bookmarks.nameLabel}
+            placeholder={t.history.bookmarks.namePlaceholder}
+            maxLength={200}
+            value={field.state.value}
+            onChange={(e) => field.handleChange(e.target.value)}
+            className="h-8 max-w-sm text-sm"
+          />
+        )}
+      </form.Field>
+      <Button type="submit" size="sm">
+        {t.history.bookmarks.save}
+      </Button>
+      <Button type="button" variant="ghost" size="sm" onClick={onDone}>
+        {t.notes.cancel}
+      </Button>
+    </form>
+  );
+}
+
+function BookmarksTab() {
+  const t = useT();
+  const study = useStudy();
+  const { prefs } = usePreferences();
+  const formatDate = useFormatDate();
+  const [renaming, setRenaming] = useState<string | null>(null);
+  if (study.bookmarks.length === 0)
+    return <p className="pt-16 text-center text-sm text-muted-foreground">{t.history.bookmarks.empty}</p>;
+  return (
+    <ul className="flex max-w-3xl flex-col gap-3">
+      {study.bookmarks.map((b) => {
+        const { verse } = splitVerseId(b.start);
+        return (
+          <li key={b.id} className="group rounded-xl border bg-card p-4">
+            {renaming === b.id ? (
+              <BookmarkRename bookmark={b} onDone={() => setRenaming(null)} />
+            ) : (
+              <div className="flex items-start gap-3">
+                <div className="min-w-0 flex-1">
+                  <h3 className="truncate text-sm font-semibold">{b.label || formatRange(b, prefs.locale)}</h3>
+                  <p className="mt-0.5 flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
+                    {b.label && <PassageLink range={b} />}
+                    {t.history.bookmarks.savedOn(formatDate(b.createdAt))}
+                  </p>
+                </div>
+                <div className="flex shrink-0 items-center gap-0.5">
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    aria-label={t.history.bookmarks.rename}
+                    title={t.history.bookmarks.rename}
+                    onClick={() => setRenaming(b.id)}
+                  >
+                    <Pencil />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    aria-label={t.history.bookmarks.remove}
+                    title={t.history.bookmarks.remove}
+                    onClick={() => {
+                      const undo = study.removeBookmark(b.id);
+                      toast(t.history.bookmarks.removed, { action: { label: t.notes.undo, onClick: undo } });
+                    }}
+                  >
+                    <Trash2 />
+                  </Button>
+                  <Button variant="ghost" size="sm" asChild>
+                    <Link to="/read" search={{ c: chapterOf(b.start), v: verse || undefined }}>
+                      {t.history.openInReader} <ArrowRight />
+                    </Link>
+                  </Button>
+                </div>
+              </div>
+            )}
+            <PassageText range={b} className="mt-2 line-clamp-3 text-[0.9em] text-foreground/85" />
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
+const TABS = ["notes", "highlights", "collections", "bookmarks", "journal"] as const;
 
 export function StudyPage() {
   const t = useT();
@@ -355,6 +471,7 @@ export function StudyPage() {
               <TabsTrigger value="notes">{t.study.notes}</TabsTrigger>
               <TabsTrigger value="highlights">{t.study.highlights}</TabsTrigger>
               <TabsTrigger value="collections">{t.study.collections}</TabsTrigger>
+              <TabsTrigger value="bookmarks">{t.history.bookmarks.tab}</TabsTrigger>
               <TabsTrigger value="journal">{t.study.journal}</TabsTrigger>
             </TabsList>
           }
@@ -370,6 +487,9 @@ export function StudyPage() {
         </TabsContent>
         <TabsContent value="collections" className="min-h-0 flex-1 overflow-y-auto">
           <CollectionsTab />
+        </TabsContent>
+        <TabsContent value="bookmarks" className="min-h-0 flex-1 overflow-y-auto">
+          <BookmarksTab />
         </TabsContent>
       </Tabs>
     </Page>
