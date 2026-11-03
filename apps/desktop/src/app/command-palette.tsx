@@ -10,6 +10,7 @@ import {
   CornerDownLeft,
   Maximize2,
   NotebookPen,
+  Search,
   Settings,
   Sun,
 } from "lucide-react";
@@ -27,7 +28,8 @@ interface Item {
 
 /**
  * SOURCE OF TRUTH KEYWORDS: CommandPalette, ⌘K, go to passage, command menu, combobox
- * WHAT:  Jump to any passage typed in English or Amharic, a book, a screen, or run a command.
+ * WHAT:  Jump to any passage typed in English or Amharic, a book, a screen, run a command, or
+ *        search the whole Bible for the typed words.
  * WHY:   Typing a reference is the fastest way around the Bible. It is a real combobox so
  *        screen readers follow the highlighted option.
  * WHERE: app shell (⌘K and the sidebar search button).
@@ -74,6 +76,18 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
         run: goRead(makeVerseId(book.ord, 1)),
       });
     }
+  }
+  // Anything typed can also be a word search; it leads when nothing above matched.
+  if (q) {
+    items.push({
+      id: "search",
+      label: t.search.paletteSearch(q),
+      icon: <Search className="size-4" />,
+      run: () => {
+        void navigate({ to: "/search", search: { q } });
+        close();
+      },
+    });
   }
   const pages = [
     { to: "/today", label: t.nav.today, icon: <Sun className="size-4" /> },
