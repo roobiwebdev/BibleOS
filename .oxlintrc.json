@@ -12,10 +12,24 @@
     "react/rules-of-hooks": "error",
     "react/react-in-jsx-scope": "off",
     "import/no-unassigned-import": "off",
-    "react/no-unstable-nested-components": ["warn", { "allowAsProps": true }],
-    "no-console": ["warn", { "allow": ["warn", "error", "info", "log"] }]
+    "react/no-unstable-nested-components": [
+      "warn",
+      {
+        "allowAsProps": true
+      }
+    ],
+    "no-console": [
+      "warn",
+      {
+        "allow": ["warn", "error", "info", "log"]
+      }
+    ]
   },
-  "env": { "builtin": true, "browser": true, "node": true },
+  "env": {
+    "builtin": true,
+    "browser": true,
+    "node": true
+  },
   "ignorePatterns": [
     "**/node_modules/**",
     "**/.next/**",
@@ -26,5 +40,14 @@
     "packages/local-db/migrations/**",
     "apps/docs/.source/**",
     ".reference/**"
+  ],
+  "overrides": [
+    {
+      "files": ["apps/desktop/**"],
+      "rules": {
+        "nextjs/no-img-element": "off",
+        "nextjs/no-html-link-for-pages": "off"
+      }
+    }
   ]
 }
