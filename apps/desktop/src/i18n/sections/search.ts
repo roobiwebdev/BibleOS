@@ -27,6 +27,10 @@ const en = {
   byBook: "Matches by book",
   noResults: (q: string) => `No verses match “${q}”`,
   didYouMean: "Did you mean",
+  languageMismatch: (q: string, bible: string, language: string) =>
+    `“${q}” is in ${language}, but ${bible} is in a different language, so it can't match.`,
+  searchIn: (abbreviation: string) => `Search ${abbreviation} instead`,
+  languageNames: { en: "English", am: "Amharic" },
   openBook: (name: string) => `Open ${name}`,
   goTo: (ref: string) => `Go to ${ref}`,
   ntOnly: "This translation has only the New Testament.",
@@ -56,6 +60,10 @@ const am: typeof en = {
   byBook: "ውጤቶች በየመጽሐፉ",
   noResults: (q: string) => `«${q}» የሚል ጥቅስ አልተገኘም`,
   didYouMean: "ይህን ማለትዎ ነው?",
+  languageMismatch: (q: string, bible: string, language: string) =>
+    `«${q}» በ${language} የተጻፈ ነው፤ ${bible} ግን በሌላ ቋንቋ ስለሆነ አይገኝም።`,
+  searchIn: (abbreviation: string) => `በ${abbreviation} ይፈልጉ`,
+  languageNames: { en: "እንግሊዝኛ", am: "አማርኛ" },
   openBook: (name: string) => `${name} ይክፈቱ`,
   goTo: (ref: string) => `ወደ ${ref} ይሂዱ`,
   ntOnly: "ይህ ትርጉም አዲስ ኪዳንን ብቻ ይዟል።",
