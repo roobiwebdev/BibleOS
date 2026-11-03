@@ -29,6 +29,7 @@ packages/config     Module registry, branding, themes, shared option lists (no r
 packages/ui         shadcn/ui primitives + theme tokens (globals.css)
 
 apps/desktop        BibleOS: Tauri 2 shell (src-tauri) + Vite React SPA (src)
+apps/site           Public landing page: static Vite + React, prerendered; downloads from GitHub releases
 packages/bible-core Pure TS: books, verse ids, reference parser, normalize, calendar, habits, parallel, range
 packages/bible-data Build pipeline: pinned downloads → USFM parser → one read-only SQLite per translation
 packages/local-db   Drizzle SQLite schema + migrations + SQLite executor interface and adapters
@@ -170,6 +171,10 @@ pnpm --filter desktop bibles        build translation DBs into src-tauri/resourc
 pnpm --filter desktop build         Tauri production build for this computer (Mac: .app + DMG)
 pnpm --filter desktop release:version <x.y.z>   set the app version before a release (see docs/engineering/releasing.md)
 pnpm --filter @starter/bible-data build:bibles   translation DBs only
+
+pnpm --filter site dev              landing page on http://localhost:4310
+pnpm --filter site build            static site in apps/site/dist (GitHub Pages or Vercel)
+pnpm --filter site capture          re-capture screenshots, demo poster and og.png (needs both dev servers)
 ```
 
 Run `pnpm --filter desktop bibles` once before the first desktop run; its output is gitignored. Desktop builds are unsigned: on first open, allow the app once in System Settings → Privacy & Security → Open Anyway (Windows: SmartScreen → More info → Run anyway). Releases for all three platforms are built by `.github/workflows/release.yml` when a `v*` tag is pushed; never commit the updater signing key.

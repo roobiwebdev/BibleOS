@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en" data-theme="sepia">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>BibleOS: read the Bible in Amharic and English</title>
+    <meta
+      name="description"
+      content="BibleOS is a free Bible study app for Mac, Windows and Linux. Read Amharic and English side by side, highlight, write notes, follow reading plans and search, with everything kept on your computer."
+    />
+    <link rel="canonical" href="https://roobiwebdev.github.io/BibleOS/" />
+    <meta name="theme-color" content="#f1e5d1" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#141518" media="(prefers-color-scheme: dark)" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="BibleOS" />
+    <meta property="og:title" content="BibleOS: read the Bible in Amharic and English" />
+    <meta
+      property="og:description"
+      content="A free, local-first Bible study app for Mac, Windows and Linux. Parallel Amharic and English, notes, plans and search, all offline."
+    />
+    <meta property="og:url" content="https://roobiwebdev.github.io/BibleOS/" />
+    <meta property="og:image" content="https://roobiwebdev.github.io/BibleOS/og.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="BibleOS showing John 3 in English and Amharic side by side." />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="icon" type="image/png" href="./favicon.png" />
+    <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
+    <script>
+      // Pick the theme before first paint: the visitor's choice, else the system setting.
+      (function () {
+        var theme = null;
+        try {
+          theme = localStorage.getItem("bibleos-site-theme");
+        } catch (e) {}
+        if (theme !== "night" && theme !== "sepia") {
+          theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "night" : "sepia";
+        }
+        document.documentElement.dataset.theme = theme;
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"><!--app--></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
