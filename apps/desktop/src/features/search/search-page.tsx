@@ -20,6 +20,7 @@ import { ArrowRight, BookOpen, Check, ChevronDown, Search, X } from "lucide-reac
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 
 import { Page, PageHeader } from "../../components/page";
+import { TranslationMenu } from "../../components/translation-menu";
 import type { SearchVerse } from "../../lib/bible/source";
 import { usePreferences, useT } from "../../lib/state/preferences";
 import { searchRoute } from "../../router";
@@ -37,38 +38,6 @@ const topBooks = (perBook: readonly { ord: number; count: number }[]) =>
 const TYPING_DELAY_MS = 150;
 
 type Language = "am" | "en";
-
-function TranslationMenu({ value, onChange }: { value: string; onChange: (id: string) => void }) {
-  const t = useT();
-  const current = TRANSLATIONS.find((x) => x.id === value);
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild nativeButton>
-        <Button variant="outline" size="sm" className="gap-1.5" aria-label={t.search.translation}>
-          <span className="font-semibold">{current?.abbreviation ?? value}</span>
-          <ChevronDown className="size-3 opacity-60" />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-72">
-        {(["am", "en"] as const).map((lang, i) => (
-          <DropdownMenuGroup key={lang}>
-            {i > 0 && <DropdownMenuSeparator />}
-            <DropdownMenuLabel>{lang === "am" ? "አማርኛ · Amharic" : "English"}</DropdownMenuLabel>
-            {TRANSLATIONS.filter((x) => x.language === lang).map((x) => (
-              <DropdownMenuItem key={x.id} onClick={() => onChange(x.id)} className="gap-2">
-                <span className="w-9 text-xs font-semibold text-muted-foreground">{x.abbreviation}</span>
-                <span lang={x.language} className="flex-1 truncate">
-                  {x.name}
-                </span>
-                {x.id === value && <Check className="size-3.5" />}
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuGroup>
-        ))}
-      </DropdownMenuContent>
-    </DropdownMenu>
-  );
-}
 
 function Chip({
   active,
@@ -281,7 +250,14 @@ export function SearchPage() {
     <Page>
       <PageHeader
         title={t.search.title}
-        actions={<TranslationMenu value={translationId} onChange={changeTranslation} />}
+        actions={
+          <TranslationMenu
+            value={translationId}
+            onChange={changeTranslation}
+            variant="outline"
+            label={t.search.translation}
+          />
+        }
       />
 
       <div className="flex flex-col gap-3">
