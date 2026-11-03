@@ -1,4 +1,5 @@
 import {
+  bookmarks,
   chapterReads,
   collectionItems,
   collections,
@@ -8,6 +9,8 @@ import {
   noteLinks,
   notes,
   noteTags,
+  planProgress,
+  plans,
   readingSessions,
   settings,
   tags,
@@ -59,6 +62,17 @@ export const backupSchema = z.object({
     chapterReads: rows(createSelectSchema(chapterReads)),
     goals: rows(createSelectSchema(goals)),
     settings: rows(createSelectSchema(settings, { key: (s) => s.max(64), value: (s) => s.max(100_000) })),
+    // Added after the first release; older backups without them import as empty lists.
+    plans: rows(
+      createSelectSchema(plans, {
+        planKey: (s) => s.max(64),
+        title: (s) => s.max(LIMITS.title),
+        definition: (s) => s.max(200_000),
+        startedOn: dayKeySchema,
+      }),
+    ),
+    planProgress: rows(createSelectSchema(planProgress)),
+    bookmarks: rows(createSelectSchema(bookmarks, { label: (s) => s.max(LIMITS.title) })),
   }),
 });
 export type StudyBackup = z.output<typeof backupSchema>;
@@ -94,15 +108,17 @@ function assertReferences(data: StudyBackup["data"]): void {
   const noteIds = new Set(data.notes.map((n) => n.id));
   const tagIds = new Set(data.tags.map((t) => t.id));
   const collectionIds = new Set(data.collections.map((c) => c.id));
+  const planIds = new Set(data.plans.map((p) => p.id));
   const orphan =
     data.noteAnchors.some((a) => !noteIds.has(a.noteId)) ||
     data.noteTags.some((t) => !noteIds.has(t.noteId) || !tagIds.has(t.tagId)) ||
     data.noteLinks.some((l) => !noteIds.has(l.fromNoteId)) ||
-    data.collectionItems.some((i) => !collectionIds.has(i.collectionId));
+    data.collectionItems.some((i) => !collectionIds.has(i.collectionId)) ||
+    data.planProgress.some((p) => !planIds.has(p.planId));
   if (orphan)
     throw new CommandError(
       "INVALID_INPUT",
-      "The backup file is incomplete: some rows point at missing notes, tags or collections.",
+      "The backup file is incomplete: some rows point at missing notes, tags, collections or plans.",
     );
 }
 
@@ -195,6 +211,9 @@ export const backupCommands = {
       await upsert("highlights", highlights, data.highlights);
       await upsert("readingSessions", readingSessions, data.readingSessions);
       await upsert("goals", goals, data.goals);
+      await upsert("plans", plans, data.plans);
+      await upsert("planProgress", planProgress, data.planProgress);
+      await upsert("bookmarks", bookmarks, data.bookmarks);
       changed.settings = await backupService.upsertRows(ctx.executor, settings, data.settings, {
         key: "key",
         newerWins: true,
