@@ -93,6 +93,10 @@ export const preferencesSchema = z.object({
     restWeekdays: z.array(z.number().int().min(0).max(6)).max(7),
     weekStartsOn: z.number().int().min(0).max(6),
   }),
+  /** The first-run welcome has been finished or skipped. */
+  onboarded: z.boolean(),
+  /** Take a daily copy of the study database (kept in the app data folder). */
+  autoBackup: z.boolean(),
 });
 export type Preferences = z.output<typeof preferencesSchema>;
 export const preferencesPatchSchema = preferencesSchema.partial().strict();
@@ -113,6 +117,8 @@ export const DEFAULT_PREFERENCES: Preferences = {
   notesRail: true,
   goalMinutes: 15,
   rules: { ...DEFAULT_STREAK_RULES, restWeekdays: [...DEFAULT_STREAK_RULES.restWeekdays] },
+  onboarded: false,
+  autoBackup: true,
 };
 
 export function rangeOf(row: { startVid: number; endVid: number }): VerseRange {
