@@ -45,7 +45,7 @@ export const readRoute = createRoute({
 });
 
 export const studySearch = z.object({
-  tab: z.enum(["notes", "highlights", "collections", "journal"]).optional().catch(undefined),
+  tab: z.enum(["notes", "highlights", "collections", "bookmarks", "journal"]).optional().catch(undefined),
   note: z.string().optional().catch(undefined),
 });
 
