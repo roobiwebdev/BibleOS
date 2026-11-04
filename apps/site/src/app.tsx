@@ -1,3 +1,5 @@
+import { NextStepsDialog } from "./components/next-steps-dialog";
+import { NextStepsProvider } from "./lib/next-steps";
 import { ReleaseProvider } from "./lib/release-context";
 import { Amharic } from "./sections/amharic";
 import { DownloadSection } from "./sections/download";
@@ -18,17 +20,20 @@ import { Privacy } from "./sections/privacy";
 export function App() {
   return (
     <ReleaseProvider>
-      <SiteNav />
-      <main id="main">
-        <Hero />
-        <Features />
-        <Amharic />
-        <Privacy />
-        <DownloadSection />
-        <InstallGuide />
-        <Faq />
-      </main>
-      <SiteFooter />
+      <NextStepsProvider>
+        <SiteNav />
+        <main id="main">
+          <Hero />
+          <Features />
+          <Amharic />
+          <Privacy />
+          <DownloadSection />
+          <InstallGuide />
+          <Faq />
+        </main>
+        <SiteFooter />
+        <NextStepsDialog />
+      </NextStepsProvider>
     </ReleaseProvider>
   );
 }
