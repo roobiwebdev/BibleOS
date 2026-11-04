@@ -3,6 +3,7 @@ import { Link, Outlet, useRouterState } from "@tanstack/react-router";
 import { BookOpen, ChartNoAxesColumn, History, ListChecks, NotebookPen, Search, Settings, Sun } from "lucide-react";
 import { useEffect, useState } from "react";
 
+import { BuiltBy } from "../components/built-by";
 import { TitleBarStrip } from "../components/title-bar-strip";
 import { WeekDots } from "../components/week-dots";
 import { shortcutLabel } from "../lib/platform";
@@ -119,6 +120,7 @@ export function AppShell() {
             <Settings className="size-4" />
             {t.nav.settings}
           </Link>
+          <BuiltBy className="px-2.5" />
         </div>
       </aside>
 

@@ -1,4 +1,4 @@
-// The Rust side only wires the window, the SQLite bridge, file dialogs, backup copies and updates.
+// The Rust side only wires the window, the SQLite bridge, file dialogs, backup copies, updates and links.
 // Business logic lives in the shared TypeScript packages.
 mod app_icon;
 mod backups;
@@ -7,7 +7,10 @@ mod files;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    let builder = tauri::Builder::default().plugin(tauri_plugin_dialog::init());
+    let builder = tauri::Builder::default()
+        .plugin(tauri_plugin_dialog::init())
+        // Opens allow-listed links (capabilities/default.json) in the system browser.
+        .plugin(tauri_plugin_opener::init());
     // Updates are checked and installed from the web layer; these plugins only expose the calls.
     #[cfg(desktop)]
     let builder = builder
