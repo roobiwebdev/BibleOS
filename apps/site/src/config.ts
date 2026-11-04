@@ -28,7 +28,7 @@ export const AUTHOR = {
 
 export const SITE = {
   name: "BibleOS",
-  /** Canonical address used for Open Graph (GitHub Pages of the releases repo, custom domain). */
+  /** Canonical address used for Open Graph (Vercel project bibleos-site). */
   url: "https://bible.roobi.dev/",
 } as const;
 
