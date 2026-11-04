@@ -3,7 +3,7 @@ import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 
 // Relative asset paths, so the same build works at a domain root (Vercel) or under
-// /BibleOS/ on GitHub Pages.
+// /BibleOS-releases/ on GitHub Pages.
 export default defineConfig({
   base: "./",
   plugins: [react(), tailwindcss()],

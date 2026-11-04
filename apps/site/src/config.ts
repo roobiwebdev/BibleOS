@@ -1,14 +1,15 @@
 /**
  * SOURCE OF TRUTH KEYWORDS: SITE, REPO, releases URL, download assets, PLATFORMS, asset patterns, GitHub
- * WHAT:  Where BibleOS lives on the web (repository, release page, release API, site URL) and how
- *        each platform's installer is recognised among a release's files.
+ * WHAT:  Where BibleOS lives on the web (the public releases repository, release page, release API,
+ *        site URL) and how each platform's installer is recognised among a release's files.
  * WHY:   The release workflow (tauri-action) names files by a fixed pattern. Keeping the owner,
  *        repo and patterns here means a rename touches one file, and every link falls back to the
  *        same release page when the API has nothing to offer.
  * WHERE: lib/releases.ts, sections (hero, download, install, footer), index.html meta (by hand).
  */
 const OWNER = "roobiwebdev";
-const NAME = "BibleOS";
+// The public repo that holds installers, the update feed and this site. The source stays private.
+const NAME = "BibleOS-releases";
 
 export const REPO = {
   owner: OWNER,
@@ -17,7 +18,7 @@ export const REPO = {
   /** Always works, even before the first release: GitHub shows the latest or an empty list. */
   releasesUrl: `https://github.com/${OWNER}/${NAME}/releases/latest`,
   latestReleaseApi: `https://api.github.com/repos/${OWNER}/${NAME}/releases/latest`,
-  noticesUrl: `https://github.com/${OWNER}/${NAME}/blob/main/apps/site/THIRD_PARTY_NOTICES.md`,
+  noticesUrl: `https://github.com/${OWNER}/${NAME}/blob/main/THIRD_PARTY_NOTICES.md`,
 } as const;
 
 export const SITE = {

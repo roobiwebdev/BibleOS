@@ -191,7 +191,7 @@ export const COPY = {
     items: [
       {
         q: "Is BibleOS really free?",
-        a: "Yes. There is no price, no subscription and no account. The source code is on GitHub.",
+        a: "Yes. There is no price, no subscription and no account.",
       },
       {
         q: "Which Bibles are included?",
@@ -228,7 +228,7 @@ export const COPY = {
     source: "Source",
     licence: "Licence",
     notices: "Open-source notices",
-    github: "Source code on GitHub",
+    github: "BibleOS on GitHub",
     releases: "Releases",
     made: "BibleOS is free software for reading and studying Scripture.",
   },
