@@ -62,7 +62,7 @@
     "createUpdaterArtifacts": true,
     "shortDescription": "A calm, local-first Bible study app",
     "longDescription": "BibleOS is a free Bible study app that keeps your notes, highlights and reading habits on your own computer. Read Amharic and English side by side, follow reading plans, search, and work offline.",
-    "homepage": "https://roobiwebdev.github.io/BibleOS-releases/",
+    "homepage": "https://bibleos.roobi.dev/",
     "publisher": "BibleOS",
     "windows": {
       "nsis": {

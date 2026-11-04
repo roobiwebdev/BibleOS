@@ -2,8 +2,8 @@ import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 
-// Relative asset paths, so the same build works at a domain root (Vercel) or under
-// /BibleOS-releases/ on GitHub Pages.
+// Relative asset paths, so the same build works at a domain root (bibleos.roobi.dev) or
+// under a sub-path such as a GitHub Pages project URL.
 export default defineConfig({
   base: "./",
   plugins: [react(), tailwindcss()],

@@ -1,5 +1,5 @@
 # Builds the BibleOS landing page (apps/site in the private source repo) and publishes it to
-# GitHub Pages at https://roobiwebdev.github.io/BibleOS-releases/.
+# GitHub Pages at https://bibleos.roobi.dev/.
 # The page reads the latest release at runtime, so it only needs a new deploy when the site changes.
 #
 # The canonical copy of this file lives in the source repo at release-repo/.github/workflows/.
