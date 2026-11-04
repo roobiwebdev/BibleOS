@@ -170,7 +170,7 @@ jobs:
         continue-on-error: ${{ runner.os == 'Windows' }}
         run: |
           tauri-driver > tauri-driver.log 2>&1 &
-          node .releases-repo/scripts/smoke-webdriver.mjs "${{ matrix.binary }}" "smoke-${{ runner.os }}.png"
+          node .releases-repo/scripts/smoke-webdriver.ts "${{ matrix.binary }}" "smoke-${{ runner.os }}.png"
 
       - name: Upload the screenshot and logs
         if: always()
