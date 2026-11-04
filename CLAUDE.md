@@ -173,7 +173,7 @@ pnpm --filter desktop release:version <x.y.z>   set the app version before a rel
 pnpm --filter @starter/bible-data build:bibles   translation DBs only
 
 pnpm --filter site dev              landing page on http://localhost:4310
-pnpm --filter site build            static site in apps/site/dist (GitHub Pages or Vercel)
+pnpm --filter site build            static site in apps/site/dist (deployed to Vercel: bible.roobi.dev)
 pnpm --filter site capture          re-capture screenshots, demo poster and og.png (needs both dev servers)
 ```
 
