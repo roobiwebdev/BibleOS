@@ -1,0 +1,166 @@
+# Builds BibleOS from the private source repo on Windows, Linux and macOS and checks that the
+# app starts and keeps running. On Windows and Linux it also drives the window through
+# tauri-driver (WebDriver) to check the screen rendered: the sidebar, the verse of the day in
+# English and Amharic (so the bundled Bible databases open) and the bundled Ethiopic font.
+# A screenshot from each is attached to the run. Nothing is signed, uploaded or released.
+#
+# The canonical copy of this file lives in the source repo at release-repo/.github/workflows/.
+# Run it from the Actions tab (or `gh workflow run smoke.yml -R roobiwebdev/BibleOS-releases -f ref=main`).
+name: Smoke test
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Branch, tag or commit of the source repo to test
+        required: true
+        default: main
+
+concurrency:
+  group: smoke-${{ inputs.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    name: Smoke (${{ matrix.name }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Windows x64
+            os: windows-latest
+            binary: apps/desktop/src-tauri/target/release/bibleos.exe
+          - name: Linux x64
+            os: ubuntu-22.04
+            binary: apps/desktop/src-tauri/target/release/bibleos
+          - name: macOS
+            os: macos-latest
+            binary: apps/desktop/src-tauri/target/release/bibleos
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    defaults:
+      run:
+        shell: bash
+    steps:
+      # The source is private; a read-only deploy key on that repo lets this job read it.
+      - uses: actions/checkout@v4
+        with:
+          repository: roobiwebdev/BibleOS
+          ref: ${{ inputs.ref }}
+          ssh-key: ${{ secrets.SOURCE_DEPLOY_KEY }}
+          persist-credentials: false
+
+      # The WebDriver check script lives in this (public) repo, so any source ref can be tested.
+      - uses: actions/checkout@v4
+        with:
+          path: .releases-repo
+          sparse-checkout: scripts
+          persist-credentials: false
+
+      - name: Install Linux build and test dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev patchelf \
+            webkit2gtk-driver xvfb
+
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: apps/desktop/src-tauri -> target
+
+      - run: pnpm install --frozen-lockfile
+
+      - uses: actions/cache@v4
+        with:
+          path: packages/bible-data/.cache
+          key: bible-sources-${{ hashFiles('packages/bible-data/src/manifest.ts') }}
+
+      - name: Build the bundled Bibles
+        run: pnpm --filter desktop bibles
+
+      # A release build of the app binary, without installers. With no bundle step and the
+      # updater files switched off, no signing key is needed. The override goes in a file because
+      # inline JSON loses its quotes on its way through pnpm's Windows shims.
+      - name: Build the app
+        run: |
+          echo '{"bundle":{"createUpdaterArtifacts":false}}' > "$RUNNER_TEMP/smoke.tauri.conf.json"
+          pnpm --filter desktop tauri build --no-bundle --config "${{ runner.temp }}/smoke.tauri.conf.json"
+
+      - name: Start a virtual display
+        if: runner.os == 'Linux'
+        run: |
+          Xvfb :99 -screen 0 1280x800x24 &
+          echo "DISPLAY=:99" >> "$GITHUB_ENV"
+
+      # The app must still be running 20 seconds after launch, with no Rust panic in its output.
+      - name: Launch and keep running (Linux, macOS)
+        if: runner.os != 'Windows'
+        run: |
+          "${{ matrix.binary }}" > app.log 2>&1 &
+          pid=$!
+          sleep 20
+          cat app.log
+          if ! kill -0 "$pid" 2>/dev/null; then
+            code=0; wait "$pid" || code=$?
+            echo "::error::BibleOS exited within 20 seconds (exit code $code)"; exit 1
+          fi
+          kill "$pid"
+          if grep -qi "panicked" app.log; then echo "::error::BibleOS logged a panic"; exit 1; fi
+
+      - name: Launch and keep running (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $app = Start-Process -FilePath (Resolve-Path "${{ matrix.binary }}") -PassThru -RedirectStandardError app.log
+          Start-Sleep -Seconds 20
+          Get-Content app.log -ErrorAction SilentlyContinue
+          if ($app.HasExited) {
+            Write-Output "::error::BibleOS exited within 20 seconds (exit code $($app.ExitCode))"
+            exit 1
+          }
+          Stop-Process -Id $app.Id
+          if (Select-String -Path app.log -Pattern "panicked" -Quiet) {
+            Write-Output "::error::BibleOS logged a panic"
+            exit 1
+          }
+
+      - name: Install tauri-driver
+        if: runner.os != 'macOS'
+        run: cargo install tauri-driver --locked
+
+      # WebView2 needs the Edge driver of the same version; this tool downloads the right one.
+      - name: Install the Edge WebDriver (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          cargo install --git https://github.com/chippers/msedgedriver-tool
+          & "$HOME/.cargo/bin/msedgedriver-tool.exe"
+          $PWD.Path >> $env:GITHUB_PATH
+
+      - name: Check the window rendered (WebDriver)
+        if: runner.os != 'macOS'
+        run: |
+          tauri-driver > tauri-driver.log 2>&1 &
+          node .releases-repo/scripts/smoke-webdriver.mjs "${{ matrix.binary }}" "smoke-${{ runner.os }}.png"
+
+      - name: Upload the screenshot and logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-${{ runner.os }}
+          path: |
+            smoke-*.png
+            app.log
+            tauri-driver.log
+          if-no-files-found: ignore
