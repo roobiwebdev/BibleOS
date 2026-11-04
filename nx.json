@@ -15,22 +15,9 @@
     "sharedGlobals": ["{workspaceRoot}/tsconfig.json", "{workspaceRoot}/packages/config/tsconfig.base.json"]
   },
   "targetDefaults": {
-    "build": {
-      "dependsOn": ["^build"],
-      "inputs": ["production", "^production"],
-      "outputs": ["{projectRoot}/.next"]
-    },
-    "check-types": {
-      "dependsOn": ["^check-types"],
-      "inputs": ["default", "^default"]
-    },
-    "test": {
-      "inputs": ["default", "^default"]
-    },
-    "dev": {
-      "cache": false,
-      "continuous": true
-    }
-  },
-  "analytics": true
+    "build": { "dependsOn": ["^build"], "inputs": ["production", "^production"], "outputs": ["{projectRoot}/.next"] },
+    "check-types": { "dependsOn": ["^check-types"], "inputs": ["default", "^default"] },
+    "test": { "inputs": ["default", "^default"] },
+    "dev": { "cache": false, "continuous": true }
+  }
 }
