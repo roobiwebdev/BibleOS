@@ -4,7 +4,7 @@ BibleOS is a free, local-first Bible study app for Mac, Windows and Linux. Read 
 
 ## Download
 
-Get the latest version from **[the BibleOS website](https://roobiwebdev.github.io/BibleOS-releases/)** or **[the latest release](https://github.com/roobiwebdev/BibleOS-releases/releases/latest)**:
+Get the latest version from **[the BibleOS website](https://bible.roobi.dev/)** or **[the latest release](https://github.com/roobiwebdev/BibleOS-releases/releases/latest)**:
 
 | Computer                                | File                                                    |
 | --------------------------------------- | ------------------------------------------------------- |
