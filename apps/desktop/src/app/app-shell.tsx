@@ -3,7 +3,9 @@ import { Link, Outlet, useRouterState } from "@tanstack/react-router";
 import { BookOpen, ChartNoAxesColumn, History, ListChecks, NotebookPen, Search, Settings, Sun } from "lucide-react";
 import { useEffect, useState } from "react";
 
+import { TitleBarStrip } from "../components/title-bar-strip";
 import { WeekDots } from "../components/week-dots";
+import { shortcutLabel } from "../lib/platform";
 import { usePreferences, useT } from "../lib/state/preferences";
 import { useAutoBackup } from "../lib/state/use-auto-backup";
 import { useHabits } from "../lib/state/use-habits";
@@ -14,7 +16,7 @@ import logoSepia from "../assets/logo-sepia.png";
 import { Welcome } from "../features/welcome/welcome";
 import { CommandPalette } from "./command-palette";
 
-// The sidebar logo matches the Dock icon for the theme on screen.
+// The sidebar logo matches the app icon for the theme on screen.
 const LOGOS = { paper: logoPaper, sepia: logoSepia, night: logoNight } as const;
 
 const NAV = [
@@ -26,7 +28,7 @@ const NAV = [
   { to: "/progress", key: "progress", icon: ChartNoAxesColumn },
 ] as const;
 
-/** Sidebar + content frame. The top strip is draggable and leaves room for the macOS window buttons. */
+/** Sidebar + content frame. On a Mac the top strip is draggable and leaves room for the window buttons. */
 export function AppShell() {
   const t = useT();
   const { prefs, resolvedTheme } = usePreferences();
@@ -58,7 +60,7 @@ export function AppShell() {
         )}
         inert={focus}
       >
-        <div data-tauri-drag-region className="h-11 shrink-0" />
+        <TitleBarStrip />
         <div className="px-4 pb-4">
           <div className="flex items-center gap-2 px-1">
             <img src={LOGOS[resolvedTheme]} alt="" className="size-7 rounded-[7px] shadow-xs" />
@@ -71,7 +73,7 @@ export function AppShell() {
           >
             <Search className="size-3.5" />
             <span className="flex-1 truncate">{t.palette.goTo}…</span>
-            <kbd className="rounded border bg-muted px-1 text-[10px] font-medium">⌘K</kbd>
+            <kbd className="rounded border bg-muted px-1 text-[10px] font-medium">{shortcutLabel("K")}</kbd>
           </button>
         </div>
 

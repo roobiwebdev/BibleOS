@@ -46,6 +46,7 @@ import { HIGHLIGHT_BG } from "../../components/highlight-colors";
 import { TranslationMenu } from "../../components/translation-menu";
 import type { ChapterVerse } from "../../lib/bible/source";
 import { useAvailableChapters } from "../../lib/bible/use-chapter";
+import { hasOverlayTitleBar } from "../../lib/platform";
 import { usePreferences, useT } from "../../lib/state/preferences";
 import { useReadingTimer } from "../../lib/state/use-reading-timer";
 import { HIGHLIGHT_COLORS, useStudy } from "../../lib/state/study-store";
@@ -380,6 +381,8 @@ export function ReaderPage() {
           className={cn(
             "flex h-12 shrink-0 items-center gap-1 border-b px-3 transition-opacity",
             prefs.focusMode && "opacity-0 focus-within:opacity-100 hover:opacity-100",
+            // With the sidebar hidden, the Mac window buttons sit over the header's left edge.
+            prefs.focusMode && hasOverlayTitleBar && "pl-20",
           )}
         >
           <IconToggle label={t.read.previous} onClick={() => go(-1)}>
