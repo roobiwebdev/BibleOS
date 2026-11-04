@@ -1,0 +1,240 @@
+@import "tailwindcss";
+@source "./**/*.{ts,tsx}";
+
+@import "@fontsource-variable/literata";
+@import "@fontsource-variable/inter";
+@import "@fontsource/noto-serif-ethiopic/400.css";
+@import "@fontsource/noto-sans-ethiopic/400.css";
+@import "@fontsource/noto-sans-ethiopic/600.css";
+
+/*
+ * BibleOS site tokens. The theme values are copied from apps/desktop/src/styles.css (the app's
+ * source of truth) so the page and the app look the same: Sepia is the default, Night is dark,
+ * and Paper is used inside the demo when it switches themes. Components use token utilities
+ * (bg-background, text-muted-foreground, …), never raw colours.
+ */
+:root {
+  --radius: 0.75rem;
+  --hue: 255;
+  --font-sans: "Inter Variable", "Noto Sans Ethiopic", system-ui, sans-serif;
+  --reading-font: "Literata Variable", "Noto Serif Ethiopic", Georgia, serif;
+}
+
+[data-theme="paper"],
+[data-theme="sepia"] {
+  color-scheme: light;
+}
+[data-theme="night"] {
+  color-scheme: dark;
+}
+
+[data-theme="paper"] {
+  --background: oklch(0.982 0.008 85);
+  --foreground: oklch(0.24 0.012 60);
+  --card: oklch(0.994 0.005 85);
+  --popover: oklch(0.994 0.005 85);
+  --primary: oklch(0.5 0.1 var(--hue));
+  --primary-foreground: oklch(0.985 0.01 85);
+  --secondary: oklch(0.95 0.012 85);
+  --muted: oklch(0.955 0.011 85);
+  --muted-foreground: oklch(0.5 0.014 60);
+  --accent: oklch(0.94 0.03 var(--hue));
+  --accent-foreground: oklch(0.32 0.08 var(--hue));
+  --border: oklch(0.91 0.012 80);
+  --ring: oklch(0.5 0.1 var(--hue));
+  --sidebar: oklch(0.966 0.01 85);
+  --hl-alpha: 0.6;
+  --hl-lightness: 0.85;
+  --heat-empty: oklch(0.9 0.01 85);
+  --stage: oklch(0.86 0.03 var(--hue));
+}
+
+[data-theme="sepia"] {
+  --background: oklch(0.935 0.032 82);
+  --foreground: oklch(0.3 0.04 60);
+  --card: oklch(0.955 0.028 82);
+  --popover: oklch(0.955 0.028 82);
+  --primary: oklch(0.48 0.09 var(--hue));
+  --primary-foreground: oklch(0.97 0.02 82);
+  --secondary: oklch(0.9 0.035 80);
+  --muted: oklch(0.905 0.032 80);
+  --muted-foreground: oklch(0.46 0.04 60);
+  --accent: oklch(0.89 0.04 var(--hue));
+  --accent-foreground: oklch(0.32 0.08 var(--hue));
+  --border: oklch(0.86 0.034 76);
+  --ring: oklch(0.48 0.09 var(--hue));
+  --sidebar: oklch(0.915 0.034 80);
+  --hl-alpha: 0.6;
+  --hl-lightness: 0.8;
+  --heat-empty: oklch(0.88 0.03 80);
+  --stage: oklch(0.42 0.07 var(--hue));
+}
+
+[data-theme="night"] {
+  --background: oklch(0.17 0.004 260);
+  --foreground: oklch(0.9 0.006 85);
+  --card: oklch(0.205 0.005 260);
+  --popover: oklch(0.22 0.005 260);
+  --primary: oklch(0.74 0.1 var(--hue));
+  --primary-foreground: oklch(0.17 0.01 260);
+  --secondary: oklch(0.25 0.006 260);
+  --muted: oklch(0.24 0.006 260);
+  --muted-foreground: oklch(0.7 0.01 260);
+  --accent: oklch(0.28 0.03 var(--hue));
+  --accent-foreground: oklch(0.86 0.06 var(--hue));
+  --border: oklch(0.28 0.006 260);
+  --ring: oklch(0.74 0.1 var(--hue));
+  --sidebar: oklch(0.155 0.004 260);
+  --hl-alpha: 0.32;
+  --hl-lightness: 0.6;
+  --heat-empty: oklch(0.29 0.006 260);
+  --stage: oklch(0.26 0.03 var(--hue));
+}
+
+/* Highlight colours keep their meaning across themes; only lightness and opacity adapt. */
+[data-theme] {
+  --hl-promise: oklch(var(--hl-lightness) 0.13 85 / var(--hl-alpha));
+  --hl-command: oklch(var(--hl-lightness) 0.12 25 / var(--hl-alpha));
+  --hl-prayer: oklch(var(--hl-lightness) 0.1 250 / var(--hl-alpha));
+  --hl-insight: oklch(var(--hl-lightness) 0.12 150 / var(--hl-alpha));
+  --hl-question: oklch(var(--hl-lightness) 0.11 305 / var(--hl-alpha));
+  --heat-1: color-mix(in srgb, var(--primary) 30%, var(--heat-empty));
+  --heat-2: color-mix(in srgb, var(--primary) 55%, var(--heat-empty));
+  --heat-3: color-mix(in srgb, var(--primary) 80%, var(--heat-empty));
+  --heat-4: var(--primary);
+}
+
+@theme inline {
+  --font-sans: var(--font-sans);
+  --font-reading: var(--reading-font);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-popover: var(--popover);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-border: var(--border);
+  --color-ring: var(--ring);
+  --color-sidebar: var(--sidebar);
+  --color-stage: var(--stage);
+  --color-hl-promise: var(--hl-promise);
+  --color-hl-command: var(--hl-command);
+  --color-hl-prayer: var(--hl-prayer);
+  --color-hl-insight: var(--hl-insight);
+  --color-hl-question: var(--hl-question);
+  --color-heat-0: var(--heat-empty);
+  --color-heat-1: var(--heat-1);
+  --color-heat-2: var(--heat-2);
+  --color-heat-3: var(--heat-3);
+  --color-heat-4: var(--heat-4);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+}
+
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+  html {
+    scroll-behavior: smooth;
+    scroll-padding-top: 5rem;
+  }
+  body {
+    font-family: var(--font-sans);
+    font-feature-settings: "cv11", "ss01";
+    -webkit-font-smoothing: antialiased;
+    background: var(--background);
+    color: var(--foreground);
+    overflow-x: clip;
+    transition:
+      background-color 200ms ease,
+      color 200ms ease;
+  }
+}
+
+:lang(am) {
+  font-family: "Noto Sans Ethiopic", var(--font-sans);
+  font-synthesis: none;
+}
+
+.scripture {
+  font-family: var(--reading-font);
+  text-wrap: pretty;
+}
+.scripture:lang(am) {
+  font-family: "Noto Serif Ethiopic", var(--reading-font);
+}
+
+.verse-number {
+  font-family: var(--font-sans);
+  font-size: 0.66em;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  vertical-align: 0.4em;
+}
+
+/* Small uppercase labels, in a layer so size utilities can override them. */
+@layer components {
+  .eyebrow {
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: var(--muted-foreground);
+  }
+}
+
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Raised surfaces: one soft shadow that reads on sepia, paper and night. */
+.lift {
+  box-shadow:
+    0 1px 0 color-mix(in oklch, var(--foreground) 4%, transparent),
+    0 24px 60px -28px color-mix(in oklch, var(--foreground) 35%, transparent);
+}
+
+:where(a, button, summary, [tabindex]):focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 3px;
+  border-radius: 6px;
+}
+
+/* Sections fade up once as they scroll in. Content is visible without JavaScript. */
+[data-reveal] {
+  opacity: 0;
+  transform: translateY(14px);
+  transition:
+    opacity 600ms ease,
+    transform 600ms cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+[data-reveal][data-shown] {
+  opacity: 1;
+  transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+  [data-reveal] {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* `night:` styles apply under the Night theme, wherever data-theme is set. */
+@custom-variant night (&:where([data-theme="night"], [data-theme="night"] *));
