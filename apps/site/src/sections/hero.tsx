@@ -42,7 +42,11 @@ export function Hero() {
   const info = PLATFORMS.find((p) => p.id === platform);
   const primary = platform ? downloadsFor(release, platform).find((l) => l.recommended) : undefined;
   // The prerendered page shows the poster; the live demo mounts after hydration.
-  const inBrowser = useSyncExternalStore(noSubscribe, () => true, () => false);
+  const inBrowser = useSyncExternalStore(
+    noSubscribe,
+    () => true,
+    () => false,
+  );
   const version = release.status === "ready" ? COPY.hero.version(release.version) : undefined;
 
   return (
