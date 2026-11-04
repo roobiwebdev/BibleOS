@@ -3,7 +3,7 @@
 BibleOS ships for macOS (one universal app for Apple Silicon and Intel), Windows and Linux. This source repo stays private; everything public lives in **[roobiwebdev/BibleOS-releases](https://github.com/roobiwebdev/BibleOS-releases)**:
 
 - its Releases hold the installers and `latest.json`, the update feed installed apps check when they open
-- its `release.yml` workflow does the builds; public repos get free macOS build machines
+- its workflows (`release.yml`, `smoke.yml`) do the builds and startup checks; public repos get free macOS build machines
 
 The landing page (`apps/site`) is hosted on Vercel as the project `bibleos-site` (team roobis-projects), at https://bible.roobi.dev/. roobi.dev's DNS is on Vercel, so the subdomain needs no record of its own.
 
@@ -19,6 +19,22 @@ The canonical copies of that repo's files are in `release-repo/` here. Change th
 | All           | `latest.json`                                                                                | The update feed installed apps read                                      |
 
 The landing page and the READMEs link to `BibleOS-releases/releases/latest`, so they always point at the newest published release.
+
+## Smoke test on Windows and Linux
+
+The app is developed on a Mac, so before a release (or after any change to the Rust side, the window setup or the CSP), check that it starts on the other systems:
+
+```bash
+gh workflow run smoke.yml -R roobiwebdev/BibleOS-releases -f ref=main   # or a branch, tag or commit
+gh run watch -R roobiwebdev/BibleOS-releases
+```
+
+For each of Windows, Linux (Ubuntu 22.04, under a virtual display) and macOS it builds the app binary without installers or signing (about 15–25 minutes), then:
+
+1. **Launch and keep running:** starts the app and fails if it exits within 20 seconds or prints a Rust panic.
+2. **Check the window rendered** (Windows and Linux; macOS has no WebDriver for its webview): opens the app through `tauri-driver` and runs `release-repo/scripts/smoke-webdriver.mjs`, which waits for the sidebar's "Today", the verse of the day in English and Amharic (so the bundled Bible databases opened) and the bundled Noto Ethiopic font, then checks the window still answers 20 seconds later.
+
+Each run attaches a screenshot and the logs (`smoke-Windows`, `smoke-Linux`, `smoke-macOS` artifacts). It tests the binary, not the installers; open the draft release's installers by hand as in step 4 below.
 
 ## Cutting a release
 

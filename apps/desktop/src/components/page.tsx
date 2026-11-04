@@ -1,9 +1,11 @@
 import { cn } from "@starter/ui/lib/utils";
 import type { ReactNode } from "react";
 
+import { TitleBarStrip } from "./title-bar-strip";
+
 /**
  * SOURCE OF TRUTH KEYWORDS: Page, PageHeader, page frame, page container, Eyebrow, Card
- * WHAT:  The frame every top-level screen sits in: a draggable strip for the window, one
+ * WHAT:  The frame every top-level screen sits in: the title bar strip (TitleBarStrip), one
  *        scroll area, and a content column with the same width and left edge everywhere.
  * WHY:   Screens jumped between different left offsets; one frame keeps them aligned and
  *        lets them adapt to narrow windows in one place.
@@ -12,7 +14,7 @@ import type { ReactNode } from "react";
 export function Page({ children, scroll = true }: { children: ReactNode; scroll?: boolean }) {
   return (
     <div className={cn("@container flex h-full flex-col", scroll && "overflow-y-auto")}>
-      <div data-tauri-drag-region className="h-11 shrink-0" />
+      <TitleBarStrip />
       <div className="mx-auto flex w-full max-w-5xl min-h-0 flex-1 flex-col px-6 pb-16 @3xl:px-10">{children}</div>
     </div>
   );
