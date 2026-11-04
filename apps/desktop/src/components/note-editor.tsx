@@ -4,6 +4,7 @@ import { Textarea } from "@starter/ui/components/textarea";
 import { useForm } from "@tanstack/react-form";
 import { z } from "zod";
 
+import { shortcutLabel } from "../lib/platform";
 import { useT } from "../lib/state/preferences";
 import type { Note, NoteDraft, VerseRange } from "../lib/state/study-store";
 
@@ -116,7 +117,7 @@ export function NoteEditor({
         </Button>
         <Button type="submit" size="sm">
           {t.notes.save}
-          <kbd className="ml-1 text-[10px]">⌘↵</kbd>
+          <kbd className="ml-1 text-[10px]">{shortcutLabel("Enter")}</kbd>
         </Button>
       </div>
     </form>
