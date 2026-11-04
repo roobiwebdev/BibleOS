@@ -32,7 +32,7 @@ gh run watch -R roobiwebdev/BibleOS-releases
 For each of Windows, Linux (Ubuntu 22.04, under a virtual display) and macOS it builds the app binary without installers or signing (about 15–25 minutes), then:
 
 1. **Launch and keep running:** starts the app and fails if it exits within 20 seconds or prints a Rust panic.
-2. **Check the window rendered** (Windows and Linux; macOS has no WebDriver for its webview): opens the app through `tauri-driver` and runs `release-repo/scripts/smoke-webdriver.mjs`, which waits for the sidebar's "Today", the verse of the day in English and Amharic (so the bundled Bible databases opened) and the bundled Noto Ethiopic font, then checks the window still answers 20 seconds later.
+2. **Check the window rendered** (Windows and Linux; macOS has no WebDriver for its webview): opens the app through `tauri-driver` and runs `release-repo/scripts/smoke-webdriver.ts`, which waits for the sidebar's "Today", the verse of the day in English and Amharic (so the bundled Bible databases opened) and the bundled Noto Ethiopic font, then checks the window still answers 20 seconds later.
 
 Each run attaches a screenshot and the logs (`smoke-Windows`, `smoke-Linux`, `smoke-macOS` artifacts). It tests the binary, not the installers; open the draft release's installers by hand as in step 4 below.
 
