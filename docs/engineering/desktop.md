@@ -136,6 +136,10 @@ Drizzle is pinned exactly because the `sqlite-proxy` driver changed between rele
 
 Real SQLite in tests catches what a mock would hide: constraint errors, transaction behavior and migration mistakes. Playwright runs against the preview because `tauri-driver` (Tauri's WebDriver) has no macOS support. That leaves the native shell (menus, file dialogs, plugin wiring) to manual checks.
 
+On Windows and Linux, where `tauri-driver` does work, the `smoke.yml` workflow in the releases repo starts the built app and checks the first screen rendered (see [releasing.md](releasing.md#smoke-test-on-windows-and-linux)).
+
+**Per-system differences** go through `src/lib/platform.ts` (one user-agent check, no OS plugin). The window uses macOS's overlay title bar, so only on a Mac do screens reserve the draggable top strip (`TitleBarStrip`) for the window buttons; Windows and Linux keep their native title bar. Shortcut labels come from `shortcutLabel` (⌘K on a Mac, Ctrl+K elsewhere).
+
 `pnpm check-types`, `pnpm lint` and `pnpm test` cover the desktop packages like any other workspace project.
 
 ## Packaging and distribution
