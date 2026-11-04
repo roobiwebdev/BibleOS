@@ -96,7 +96,7 @@ jobs:
           tagName: v__VERSION__
           releaseName: BibleOS __VERSION__
           releaseBody: |
-            Download the file for your computer below. Install guide: https://bibleos.roobi.dev/#install
+            Download the file for your computer below. Install guide: https://bible.roobi.dev/#install
 
             - **Mac** (Apple Silicon and Intel): `BibleOS_*_universal.dmg`
             - **Windows**: `BibleOS_*_x64-setup.exe`
