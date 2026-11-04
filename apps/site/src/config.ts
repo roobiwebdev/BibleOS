@@ -34,6 +34,21 @@ export const SITE = {
 
 export type PlatformId = "mac" | "windows" | "linux";
 
+/**
+ * SOURCE OF TRUTH KEYWORDS: INSTALL_COMMANDS, one-line install, install.ps1, install.sh, irm iex, curl sh
+ * WHAT:  The one-line install command for each platform. The scripts live in public/ and are
+ *        served from the site root.
+ * WHY:   A file fetched by PowerShell or curl isn't flagged the way a browser download is, so
+ *        SmartScreen and Gatekeeper don't stop the first launch. This is the warning-free route
+ *        until the Store and notarized builds exist.
+ * WHERE: components/one-command-install.tsx (install guide and the after-download dialog).
+ */
+export const INSTALL_COMMANDS: Record<PlatformId, string> = {
+  mac: `curl -fsSL ${SITE.url}install.sh | sh`,
+  windows: `irm ${SITE.url}install.ps1 | iex`,
+  linux: `curl -fsSL ${SITE.url}install.sh | sh`,
+};
+
 export interface AssetKind {
   id: string;
   /** File type shown on the button, e.g. ".dmg". */

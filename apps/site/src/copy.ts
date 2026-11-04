@@ -205,9 +205,22 @@ export const COPY = {
     } satisfies Record<PlatformId, { requirement: string; steps: readonly InstallStep[]; tip: string }>,
   },
 
+  oneCommand: {
+    title: "Fastest: one command, no warnings",
+    how: {
+      mac: "Open Terminal (press ⌘ Space, type Terminal), paste this and press Return:",
+      windows: "Open PowerShell (Start menu, type PowerShell), paste this and press Enter:",
+      linux: "Open a terminal, paste this and press Enter:",
+    } satisfies Record<PlatformId, string>,
+    note: "It downloads BibleOS from our GitHub releases, installs it and opens it.",
+    copy: "Copy",
+    copied: "Copied",
+    usual: "Or install it the usual way",
+  },
+
   nextSteps: {
     title: "Your download has started",
-    lead: (platform: string) => `Three quick steps to open BibleOS on ${platform}.`,
+    lead: (platform: string) => `Open BibleOS on ${platform}`,
     close: "Got it",
     closeLabel: "Close",
     fullGuide: "See the full install guide",
