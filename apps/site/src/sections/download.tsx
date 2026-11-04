@@ -4,6 +4,7 @@ import { PlatformIcon } from "../components/platform-icon";
 import { SectionHeading } from "../components/section-heading";
 import { PLATFORMS, REPO } from "../config";
 import { COPY } from "../copy";
+import { useNextSteps } from "../lib/next-steps";
 import { useReleaseInfo } from "../lib/release-context";
 import { downloadsFor, formatSize } from "../lib/releases";
 
@@ -18,6 +19,7 @@ import { downloadsFor, formatSize } from "../lib/releases";
 export function DownloadSection() {
   const { release, platform } = useReleaseInfo();
   const d = COPY.download;
+  const { show } = useNextSteps();
   return (
     <section id="download" aria-labelledby="download-title" className="border-y bg-sidebar py-20 sm:py-28">
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
@@ -53,6 +55,7 @@ export function DownloadSection() {
                 {main && (
                   <a
                     href={main.url}
+                    onClick={() => main.id !== "page" && show(p.id)}
                     className={`mt-6 inline-flex items-center justify-center gap-2 rounded-full px-5 py-3 text-[15px] font-medium transition-opacity hover:opacity-90 ${
                       mine ? "bg-primary text-primary-foreground" : "bg-foreground text-background"
                     }`}
@@ -74,6 +77,7 @@ export function DownloadSection() {
                         {i > 0 && <span className="text-muted-foreground"> · </span>}
                         <a
                           href={link.url}
+                          onClick={() => show(p.id)}
                           className="font-medium underline decoration-border underline-offset-4 hover:decoration-foreground"
                         >
                           {link.format}
