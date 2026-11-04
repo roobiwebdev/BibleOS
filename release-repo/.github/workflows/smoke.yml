@@ -130,6 +130,10 @@ jobs:
             exit 1
           }
           Stop-Process -Id $app.Id
+          # WebView2's helper processes outlive the app and keep its data folder locked, which
+          # stops the WebDriver check from starting a second copy.
+          Get-Process msedgewebview2 -ErrorAction SilentlyContinue | Stop-Process -Force
+          Start-Sleep -Seconds 3
           if (Select-String -Path app.log -Pattern "panicked" -Quiet) {
             Write-Output "::error::BibleOS logged a panic"
             exit 1
