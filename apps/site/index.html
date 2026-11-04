@@ -10,8 +10,7 @@
       content="BibleOS is a free Bible study app for Mac, Windows and Linux. Read Amharic and English side by side, highlight, write notes, follow reading plans and search, with everything kept on your computer."
     />
     <link rel="canonical" href="https://bible.roobi.dev/" />
-    <meta name="theme-color" content="#f1e5d1" media="(prefers-color-scheme: light)" />
-    <meta name="theme-color" content="#141518" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#f1e5d1" />
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="BibleOS" />
     <meta property="og:title" content="BibleOS: read the Bible in Amharic and English" />
@@ -28,15 +27,13 @@
     <link rel="icon" type="image/png" href="./favicon.png" />
     <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
     <script>
-      // Pick the theme before first paint: the visitor's choice, else the system setting.
+      // Pick the theme before first paint: the visitor's saved choice, else Sepia.
       (function () {
         var theme = null;
         try {
           theme = localStorage.getItem("bibleos-site-theme");
         } catch (e) {}
-        if (theme !== "night" && theme !== "sepia") {
-          theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "night" : "sepia";
-        }
+        if (theme !== "night") theme = "sepia";
         document.documentElement.dataset.theme = theme;
       })();
     </script>

@@ -1,4 +1,4 @@
-import { ShieldCheck } from "lucide-react";
+import { Download, ShieldCheck } from "lucide-react";
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 
 import { OneCommandInstall } from "../components/one-command-install";
@@ -8,6 +8,7 @@ import { SectionHeading } from "../components/section-heading";
 import { PLATFORMS, type PlatformId } from "../config";
 import { COPY } from "../copy";
 import { useReleaseInfo } from "../lib/release-context";
+import { downloadsFor, formatSize } from "../lib/releases";
 
 /**
  * SOURCE OF TRUTH KEYWORDS: InstallGuide, install steps, tabs, Gatekeeper, SmartScreen, unsigned app
@@ -18,7 +19,7 @@ import { useReleaseInfo } from "../lib/release-context";
  * WHERE: app.tsx.
  */
 export function InstallGuide() {
-  const { platform } = useReleaseInfo();
+  const { platform, release } = useReleaseInfo();
   const [tab, setTab] = useState<PlatformId>("mac");
   const chosen = useRef(false);
   const tabs = useRef<Partial<Record<PlatformId, HTMLButtonElement | null>>>({});
@@ -106,6 +107,25 @@ export function InstallGuide() {
               <p className="mt-6 mb-4 text-[13px] font-medium tracking-wide text-muted-foreground uppercase">
                 {COPY.oneCommand.usual}
               </p>
+              {(() => {
+                // Visitors arriving from the hero haven't downloaded yet; the usual way starts here.
+                const file = downloadsFor(release, p.id).find((l) => l.recommended);
+                if (!file) return null;
+                return (
+                  <a
+                    href={file.url}
+                    className="mb-5 inline-flex items-center gap-2 rounded-full border bg-background px-4 py-2 text-[14px] font-medium transition-colors hover:bg-muted"
+                  >
+                    <Download className="size-4" aria-hidden />
+                    {COPY.hero.downloadFor(p.name)}
+                    {file.id !== "page" && (
+                      <span className="text-muted-foreground">
+                        {[file.format, file.size ? formatSize(file.size) : undefined].filter(Boolean).join(" · ")}
+                      </span>
+                    )}
+                  </a>
+                );
+              })()}
               <InstallSteps platform={p.id} />
               <p className="mt-6 border-t pt-4 text-[14px] leading-relaxed text-muted-foreground">{guide.tip}</p>
             </div>

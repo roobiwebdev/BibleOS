@@ -6,9 +6,7 @@ import { PlatformIcon } from "../components/platform-icon";
 import { PLATFORMS } from "../config";
 import { COPY } from "../copy";
 import { STAGE } from "../demo/script";
-import { useNextSteps } from "../lib/next-steps";
 import { useReleaseInfo } from "../lib/release-context";
-import { downloadsFor } from "../lib/releases";
 
 const DemoShowcase = lazy(() => import("../demo/showcase"));
 
@@ -41,7 +39,6 @@ function Poster() {
 export function Hero() {
   const { release, platform } = useReleaseInfo();
   const info = PLATFORMS.find((p) => p.id === platform);
-  const primary = platform ? downloadsFor(release, platform).find((l) => l.recommended) : undefined;
   // The prerendered page shows the poster; the live demo mounts after hydration.
   const inBrowser = useSyncExternalStore(
     noSubscribe,
@@ -49,7 +46,6 @@ export function Hero() {
     () => false,
   );
   const version = release.status === "ready" ? COPY.hero.version(release.version) : undefined;
-  const { show } = useNextSteps();
 
   return (
     <section id="top" aria-labelledby="hero-title" className="relative overflow-hidden">
@@ -77,11 +73,9 @@ export function Hero() {
 
           <div className="mt-9 flex w-full flex-col items-center justify-center gap-3 sm:w-auto sm:flex-row">
             <a
-              href={primary?.url ?? "#download"}
-              onClick={() => {
-                // A real file starts downloading; show what to do with it while it does.
-                if (platform && primary && primary.id !== "page") show(platform);
-              }}
+              /* The install guide opens on the visitor's system with the one-line command first,
+                 so most people copy it and are done; direct downloads are there and below. */
+              href="#install"
               className="inline-flex w-full items-center justify-center gap-2.5 rounded-full bg-primary px-6 py-3.5 text-[15px] font-medium text-primary-foreground shadow-sm transition-opacity hover:opacity-90 sm:w-auto"
             >
               {platform ? (
