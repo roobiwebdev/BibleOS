@@ -1,12 +1,8 @@
 # Third-party notices
 
-## bible-rs
-
-The hero demo's playback technique is adapted from the website of bible-rs
-(https://github.com/michaelshimeles/bible-rs): the time-based scene with a looping clock that
-runs only while visible, word-by-word captions, the chapter scrubber, and the easing helpers.
-The adapted files are `src/demo/ease.ts`, `src/demo/script.ts`, `src/demo/use-clock.ts` and
-`src/demo/showcase.tsx`. The scenes, text, images and design are BibleOS's own.
+Parts of the BibleOS website's demo player (`src/demo/ease.ts`, `script.ts`, `showcase.tsx` and
+`use-clock.ts`) are adapted from software under the MIT License, reproduced below as that licence
+requires. The scenes, text, images and design are BibleOS's own.
 
 ```
 MIT License

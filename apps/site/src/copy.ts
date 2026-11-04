@@ -227,9 +227,9 @@ export const COPY = {
     notice: "Full notice",
     source: "Source",
     licence: "Licence",
-    notices: "Open-source notices",
     github: "BibleOS on GitHub",
     releases: "Releases",
-    made: "BibleOS is free software for reading and studying Scripture.",
+    builtBy: "Built by",
+    rights: (year: number) => `© ${year} BibleOS`,
   },
 } as const;

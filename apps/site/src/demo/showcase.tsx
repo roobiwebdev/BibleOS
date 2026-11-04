@@ -1,7 +1,5 @@
 /*
- * The player layout (scaled stage, play/pause and replay, chapter scrubber with progress bars)
- * follows bible-rs (site/src/lib/demo/Showcase.svelte), https://github.com/michaelshimeles/bible-rs
- * Copyright (c) 2026 Micky (github.com/michaelshimeles). MIT License; full text in
+ * Portions adapted from MIT-licensed code; the licence and copyright notice are in
  * apps/site/THIRD_PARTY_NOTICES.md.
  */
 import { Pause, Play, RotateCcw } from "lucide-react";
