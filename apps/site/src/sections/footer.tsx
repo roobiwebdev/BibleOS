@@ -86,9 +86,15 @@ export function SiteFooter() {
           <p>{f.rights(BUILD_YEAR)}</p>
           <p>
             {f.builtBy}{" "}
-            <a href={AUTHOR.url} className="font-medium text-foreground underline-offset-4 hover:underline">
+            <a
+              href={AUTHOR.url}
+              target="_blank"
+              rel="noopener"
+              className="underline decoration-muted-foreground/60 underline-offset-4 transition-colors hover:text-foreground hover:decoration-foreground"
+            >
               {AUTHOR.name}
             </a>
+            .
           </p>
         </div>
       </div>
