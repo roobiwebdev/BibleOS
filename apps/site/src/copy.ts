@@ -1,5 +1,16 @@
 import type { PlatformId } from "./config";
 
+/** A picture of what the visitor will see at an install step (components/install-visuals.tsx). */
+export type InstallVisual = "mac-drag" | "mac-alert" | "mac-settings" | "win-smartscreen";
+
+/** One install step: what to do, plus an optional picture, shortcut link or terminal command. */
+export interface InstallStep {
+  text: string;
+  visual?: InstallVisual;
+  action?: { label: string; href: string };
+  command?: string;
+}
+
 /**
  * SOURCE OF TRUTH KEYWORDS: copy, site text, headlines, FAQ, install steps, feature descriptions
  * WHAT:  Every sentence on the landing page, in one place.
@@ -131,7 +142,7 @@ export const COPY = {
   download: {
     eyebrow: "Download",
     title: "Free, for the computer you have.",
-    body: "BibleOS is free. Pick your system below; the install guide explains the one-time security prompt.",
+    body: "BibleOS is free. Pick your system and we'll show you the three quick steps to open it.",
     recommended: "Recommended",
     yourSystem: "Your system",
     allReleases: "All releases and release notes on GitHub",
@@ -141,48 +152,65 @@ export const COPY = {
 
   install: {
     eyebrow: "Install guide",
-    title: "Installing BibleOS",
+    title: "Up and running in a minute",
+    lead: "Your computer asks you to confirm BibleOS once, the first time. Here's exactly what you'll see.",
     why: {
-      title: "Why does my computer warn me?",
-      body: "BibleOS is a free, independent app. Apple and Microsoft charge for the certificates that make their warnings go away, so the installers aren't signed by them yet and your computer asks you to confirm once. The download comes straight from the project's GitHub releases, and updates installed from inside the app are checked against the project's signing key before they install.",
+      title: "Why does my computer ask?",
+      body: "BibleOS is free and independent, and isn't paid-signed by Apple or Microsoft, so your computer asks you to confirm it the first time. It downloads straight from the project's GitHub releases, and every update is checked against BibleOS's own signing key before it installs.",
     },
     platforms: {
       mac: {
-        requirement: "macOS 12 Monterey or later, on Apple Silicon or Intel.",
+        requirement: "macOS 12 or later · Apple Silicon or Intel",
         steps: [
-          "Open the downloaded .dmg file.",
-          "Drag BibleOS into the Applications folder.",
-          "Open BibleOS from Applications. macOS says it “could not verify” the app; click Done.",
-          "Open System Settings → Privacy & Security, scroll down and click Open Anyway next to the BibleOS message, then confirm.",
-          "From then on BibleOS opens normally, and new versions install from inside the app.",
+          { text: "Open the download and drag BibleOS into Applications.", visual: "mac-drag" },
+          { text: "Open BibleOS. macOS says it can't verify the app: click Done.", visual: "mac-alert" },
+          {
+            text: "Open Privacy & Security, scroll down and click Open Anyway. You only do this once.",
+            visual: "mac-settings",
+            action: {
+              label: "Open Privacy & Security",
+              href: "x-apple.systempreferences:com.apple.settings.PrivacySecurity.extension",
+            },
+          },
         ],
-        tip: "On macOS 14 and earlier you can instead right-click (or Control-click) BibleOS in Applications, choose Open, and confirm.",
+        tip: "It's in System Settings → Privacy & Security, under Security. Updates after this install by themselves.",
       },
       windows: {
-        requirement: "Windows 10 or 11, 64-bit.",
+        requirement: "Windows 10 or 11 · 64-bit",
         steps: [
-          "Run the downloaded BibleOS setup .exe.",
-          "If Windows shows “Windows protected your PC”, click More info, then Run anyway.",
-          "Follow the installer. If your PC doesn't have Microsoft Edge WebView2, the installer downloads it.",
-          "Open BibleOS from the Start menu.",
+          { text: "Open the BibleOS setup file you downloaded." },
+          {
+            text: "If Windows says it protected your PC, click More info, then Run anyway.",
+            visual: "win-smartscreen",
+          },
+          { text: "Click Install. BibleOS opens when it's done and stays in your Start menu." },
         ],
-        tip: "Prefer an .msi? It installs the same app and suits managed or shared computers.",
+        tip: "Updates install by themselves. Prefer an .msi? It installs the same app and suits managed computers.",
       },
       linux: {
-        requirement: "64-bit Linux (x86_64). Pick the format that fits your distribution.",
+        requirement: "64-bit Linux (x86_64)",
         steps: [
-          "AppImage, for any distribution: make it executable, then run it.",
-          "Debian or Ubuntu: install the .deb with apt.",
-          "Fedora, RHEL or openSUSE: install the .rpm with dnf (or zypper).",
+          {
+            text: "AppImage works on any distribution: make it runnable, then open it.",
+            command: "chmod +x BibleOS_*_amd64.AppImage && ./BibleOS_*_amd64.AppImage",
+          },
+          {
+            text: "On Debian or Ubuntu you can install the .deb instead.",
+            command: "sudo apt install ./BibleOS_*_amd64.deb",
+          },
+          { text: "On Fedora or openSUSE, the .rpm.", command: "sudo dnf install ./BibleOS-*.x86_64.rpm" },
         ],
-        commands: [
-          "chmod +x BibleOS_*_amd64.AppImage\n./BibleOS_*_amd64.AppImage",
-          "sudo apt install ./BibleOS_*_amd64.deb",
-          "sudo dnf install ./BibleOS-*.x86_64.rpm",
-        ],
-        tip: "Run the commands from the folder you downloaded to. The * fills in the version number.",
+        tip: "Run the command in the folder you downloaded to. If the AppImage won't start on Ubuntu, run sudo apt install libfuse2 once.",
       },
-    } satisfies Record<PlatformId, { requirement: string; steps: string[]; tip: string; commands?: string[] }>,
+    } satisfies Record<PlatformId, { requirement: string; steps: readonly InstallStep[]; tip: string }>,
+  },
+
+  nextSteps: {
+    title: "Your download has started",
+    lead: (platform: string) => `Three quick steps to open BibleOS on ${platform}.`,
+    close: "Got it",
+    closeLabel: "Close",
+    fullGuide: "See the full install guide",
   },
 
   faq: {

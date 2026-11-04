@@ -1,6 +1,7 @@
 import { ShieldCheck } from "lucide-react";
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 
+import { InstallSteps } from "../components/install-steps";
 import { PlatformIcon } from "../components/platform-icon";
 import { SectionHeading } from "../components/section-heading";
 import { PLATFORMS, type PlatformId } from "../config";
@@ -9,8 +10,8 @@ import { useReleaseInfo } from "../lib/release-context";
 
 /**
  * SOURCE OF TRUTH KEYWORDS: InstallGuide, install steps, tabs, Gatekeeper, SmartScreen, unsigned app
- * WHAT:  Step-by-step install instructions per platform in keyboard-accessible tabs, opened on
- *        the visitor's system, plus why the one-time security prompt appears.
+ * WHAT:  The short install steps per platform (shared with the after-download dialog) in
+ *        keyboard-accessible tabs, opened on the visitor's system, plus why the prompt appears.
  * WHY:   The builds aren't signed with paid certificates, so macOS and Windows ask once. Saying
  *        so plainly, with the exact clicks, keeps people from giving up at that prompt.
  * WHERE: app.tsx.
@@ -51,7 +52,9 @@ export function InstallGuide() {
   return (
     <section id="install" aria-labelledby="install-title" className="py-20 sm:py-28">
       <div className="mx-auto max-w-3xl px-4 sm:px-6">
-        <SectionHeading id="install-title" eyebrow={g.eyebrow} title={g.title} />
+        <SectionHeading id="install-title" eyebrow={g.eyebrow} title={g.title}>
+          <p>{g.lead}</p>
+        </SectionHeading>
 
         <div
           role="tablist"
@@ -87,7 +90,6 @@ export function InstallGuide() {
 
         {PLATFORMS.map((p) => {
           const guide = g.platforms[p.id];
-          const commands: readonly string[] = "commands" in guide ? guide.commands : [];
           return (
             <div
               key={p.id}
@@ -98,24 +100,8 @@ export function InstallGuide() {
               tabIndex={0}
               className="mt-8 rounded-2xl border bg-card p-6 sm:p-8"
             >
-              <p className="text-[14px] text-muted-foreground">{guide.requirement}</p>
-              <ol className="mt-5 flex flex-col gap-4">
-                {guide.steps.map((step, i) => (
-                  <li key={step} className="flex gap-4">
-                    <span className="tabular grid size-7 shrink-0 place-items-center rounded-full bg-accent text-[13px] font-semibold text-accent-foreground">
-                      {i + 1}
-                    </span>
-                    <div className="min-w-0 flex-1 pt-0.5">
-                      <p className="text-[15.5px] leading-relaxed">{step}</p>
-                      {commands[i] && (
-                        <pre className="mt-2 overflow-x-auto rounded-lg bg-muted px-3.5 py-2.5 font-mono text-[13px] leading-relaxed">
-                          <code>{commands[i]}</code>
-                        </pre>
-                      )}
-                    </div>
-                  </li>
-                ))}
-              </ol>
+              <p className="mb-5 text-[14px] text-muted-foreground">{guide.requirement}</p>
+              <InstallSteps platform={p.id} />
               <p className="mt-6 border-t pt-4 text-[14px] leading-relaxed text-muted-foreground">{guide.tip}</p>
             </div>
           );
