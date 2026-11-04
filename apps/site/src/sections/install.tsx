@@ -1,6 +1,7 @@
 import { ShieldCheck } from "lucide-react";
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 
+import { OneCommandInstall } from "../components/one-command-install";
 import { InstallSteps } from "../components/install-steps";
 import { PlatformIcon } from "../components/platform-icon";
 import { SectionHeading } from "../components/section-heading";
@@ -101,6 +102,10 @@ export function InstallGuide() {
               className="mt-8 rounded-2xl border bg-card p-6 sm:p-8"
             >
               <p className="mb-5 text-[14px] text-muted-foreground">{guide.requirement}</p>
+              <OneCommandInstall platform={p.id} />
+              <p className="mt-6 mb-4 text-[13px] font-medium tracking-wide text-muted-foreground uppercase">
+                {COPY.oneCommand.usual}
+              </p>
               <InstallSteps platform={p.id} />
               <p className="mt-6 border-t pt-4 text-[14px] leading-relaxed text-muted-foreground">{guide.tip}</p>
             </div>
