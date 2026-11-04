@@ -6,6 +6,7 @@ import { isTauri } from "@tauri-apps/api/core";
 import { Check, ChevronDown, Download, FileText, Minus, Plus, RefreshCw, Upload } from "lucide-react";
 import { useEffect, useId, useState, type ReactNode } from "react";
 
+import { BuiltBy } from "../../components/built-by";
 import { Page, PageHeader } from "../../components/page";
 import { Segmented } from "../../components/segmented";
 import { TranslationSelect } from "../../components/translation-select";
@@ -486,6 +487,10 @@ export function SettingsPage() {
               </div>
             );
           })}
+        </Group>
+
+        <Group title={t.settings.about}>
+          <BuiltBy className="px-5 py-3.5 text-sm" />
         </Group>
       </div>
     </Page>

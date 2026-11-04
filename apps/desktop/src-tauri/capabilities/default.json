@@ -1,7 +1,20 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "Main window: core APIs only. SQLite goes through the app's own db bridge (study database and bundled translations), never arbitrary paths. Window: drag by the top strips (data-tauri-drag-region). Updates: check, download and install signed releases, then relaunch.",
+  "description": "Main window: core APIs only. SQLite goes through the app's own db bridge (study database and bundled translations), never arbitrary paths. Window: drag by the top strips (data-tauri-drag-region). Updates: check, download and install signed releases, then relaunch. Links: only the author's site (roobi.dev) opens in the system browser.",
   "windows": ["main"],
-  "permissions": ["core:default", "core:window:allow-start-dragging", "updater:default", "process:allow-restart"]
+  "permissions": [
+    "core:default",
+    "core:window:allow-start-dragging",
+    "updater:default",
+    "process:allow-restart",
+    {
+      "identifier": "opener:allow-open-url",
+      "allow": [
+        {
+          "url": "https://roobi.dev/*"
+        }
+      ]
+    }
+  ]
 }
