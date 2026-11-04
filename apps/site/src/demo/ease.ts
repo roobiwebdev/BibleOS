@@ -1,6 +1,5 @@
 /*
- * Adapted from bible-rs (site/src/lib/ease.ts), https://github.com/michaelshimeles/bible-rs
- * Copyright (c) 2026 Micky (github.com/michaelshimeles). MIT License; full text in
+ * Portions adapted from MIT-licensed code; the licence and copyright notice are in
  * apps/site/THIRD_PARTY_NOTICES.md.
  */
 

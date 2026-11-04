@@ -1,17 +1,20 @@
 import { TRANSLATIONS } from "@starter/bible-data/manifest";
 
 import { AppIcon } from "../components/logo";
-import { REPO } from "../config";
+import { AUTHOR, REPO } from "../config";
 import { COPY } from "../copy";
 
 /**
- * SOURCE OF TRUTH KEYWORDS: SiteFooter, licences, translation notices, attribution, third-party notices
- * WHAT:  Links, and the licence and notice of every bundled Bible text.
+ * SOURCE OF TRUTH KEYWORDS: SiteFooter, licences, translation notices, attribution, built by, author credit
+ * WHAT:  Links, the licence and notice of every bundled Bible text, and the "Built by" credit.
  * WHY:   The notices come verbatim from bible-data's manifest, the same source the app's
  *        Licences page uses; the 1962 New Testament requires its full statement wherever it is
  *        used, and the ULB's CC BY-SA licence requires attribution.
  * WHERE: app.tsx.
  */
+// The page is prerendered at build time, so the year is fixed when the site is built.
+const BUILD_YEAR = new Date().getFullYear();
+
 export function SiteFooter() {
   const f = COPY.footer;
   return (
@@ -46,11 +49,6 @@ export function SiteFooter() {
                 {f.github}
               </a>
             </li>
-            <li>
-              <a href={REPO.noticesUrl} className="hover:underline">
-                {f.notices}
-              </a>
-            </li>
           </ul>
         </div>
 
@@ -82,6 +80,16 @@ export function SiteFooter() {
               </li>
             ))}
           </ul>
+        </div>
+
+        <div className="mt-10 flex flex-col gap-2 border-t pt-6 text-[13.5px] text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
+          <p>{f.rights(BUILD_YEAR)}</p>
+          <p>
+            {f.builtBy}{" "}
+            <a href={AUTHOR.url} className="font-medium text-foreground underline-offset-4 hover:underline">
+              {AUTHOR.name}
+            </a>
+          </p>
         </div>
       </div>
     </footer>
