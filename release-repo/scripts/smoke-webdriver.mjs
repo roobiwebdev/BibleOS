@@ -22,7 +22,10 @@ const DRIVER = "http://127.0.0.1:4444";
 const sleep = (ms) => new Promise((done) => setTimeout(done, ms));
 
 async function wd(method, path, body) {
-  const init = body === undefined ? { method } : { method, headers: { "content-type": "application/json" }, body: JSON.stringify(body) };
+  const init =
+    body === undefined
+      ? { method }
+      : { method, headers: { "content-type": "application/json" }, body: JSON.stringify(body) };
   const response = await fetch(`${DRIVER}${path}`, init);
   const json = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(`${method} ${path}: ${response.status} ${JSON.stringify(json.value ?? json)}`);
