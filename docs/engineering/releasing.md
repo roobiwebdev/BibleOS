@@ -3,7 +3,7 @@
 BibleOS ships for macOS (one universal app for Apple Silicon and Intel), Windows and Linux. This source repo stays private; everything public lives in **[roobiwebdev/BibleOS-releases](https://github.com/roobiwebdev/BibleOS-releases)**:
 
 - its Releases hold the installers and `latest.json`, the update feed installed apps check when they open
-- its GitHub Pages serve the landing page at https://bibleos.roobi.dev/ (a `CNAME` record for `bibleos` in roobi.dev's Vercel DNS points at `roobiwebdev.github.io`)
+- its GitHub Pages serve the landing page at https://bible.roobi.dev/ (a `CNAME` record for `bible` in roobi.dev's Vercel DNS points at `roobiwebdev.github.io`)
 - its workflows (`release.yml`, `site.yml`) do the builds; public repos get free macOS build machines
 
 The canonical copies of that repo's files are in `release-repo/` here. Change them here first, then copy them over (see "Updating the releases repo" below). The builds read this repo with a **read-only deploy key** (Settings → Deploy keys → "BibleOS-releases builds"), so they never get write access to the source.

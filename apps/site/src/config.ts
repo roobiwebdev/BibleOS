@@ -24,7 +24,7 @@ export const REPO = {
 export const SITE = {
   name: "BibleOS",
   /** Canonical address used for Open Graph (GitHub Pages of the releases repo, custom domain). */
-  url: "https://bibleos.roobi.dev/",
+  url: "https://bible.roobi.dev/",
 } as const;
 
 export type PlatformId = "mac" | "windows" | "linux";
