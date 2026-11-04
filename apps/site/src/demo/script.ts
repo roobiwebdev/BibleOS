@@ -1,8 +1,6 @@
 /*
- * The timeline structure (chapters, word-by-word captions, typed text as key times) follows the
- * hero demo of bible-rs, https://github.com/michaelshimeles/bible-rs
- * Copyright (c) 2026 Micky (github.com/michaelshimeles). MIT License; full text in
- * apps/site/THIRD_PARTY_NOTICES.md. The scenes and content are BibleOS's own.
+ * Portions adapted from MIT-licensed code; the licence and copyright notice are in
+ * apps/site/THIRD_PARTY_NOTICES.md.
  */
 
 /** The scene is laid out at this size and scaled to fit its frame. */

@@ -18,7 +18,12 @@ export const REPO = {
   /** Always works, even before the first release: GitHub shows the latest or an empty list. */
   releasesUrl: `https://github.com/${OWNER}/${NAME}/releases/latest`,
   latestReleaseApi: `https://api.github.com/repos/${OWNER}/${NAME}/releases/latest`,
-  noticesUrl: `https://github.com/${OWNER}/${NAME}/blob/main/THIRD_PARTY_NOTICES.md`,
+} as const;
+
+/** Who makes BibleOS; shown as "Built by" in the footer. */
+export const AUTHOR = {
+  name: "Roobi",
+  url: "https://roobi.dev",
 } as const;
 
 export const SITE = {
