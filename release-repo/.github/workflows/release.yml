@@ -1,19 +1,22 @@
-# Builds BibleOS for macOS (one universal app for Apple Silicon and Intel), Windows and Linux,
-# signs the update files with the BibleOS updater key, and uploads everything to a draft
-# GitHub Release. Publishing the draft is what makes it the version installed apps update to.
+# Builds BibleOS for macOS (one universal app for Apple Silicon and Intel), Windows and Linux
+# from the private source repo, signs the update files with the BibleOS updater key, and
+# uploads everything to a draft release in THIS public repo. Publishing the draft is what makes
+# it the version installed apps update to.
 #
-# Start a release: bump the version with `pnpm --filter desktop release:version <x.y.z>`,
-# merge, then push a tag `v<x.y.z>` from main (or run this workflow by hand).
-# Details: docs/engineering/releasing.md
+# The canonical copy of this file lives in the source repo at release-repo/.github/workflows/.
+# Run it from the Actions tab (or `gh workflow run release.yml -R roobiwebdev/BibleOS-releases`).
 name: Release
 
 on:
-  push:
-    tags: ["v*"]
   workflow_dispatch:
+    inputs:
+      ref:
+        description: Branch or tag of the source repo to build
+        required: true
+        default: main
 
 concurrency:
-  group: release-${{ github.ref }}
+  group: release
   cancel-in-progress: false
 
 permissions:
@@ -41,7 +44,13 @@ jobs:
             rust-targets: ""
     runs-on: ${{ matrix.os }}
     steps:
+      # The source is private; a read-only deploy key on that repo lets this job read it.
       - uses: actions/checkout@v4
+        with:
+          repository: roobiwebdev/BibleOS
+          ref: ${{ inputs.ref }}
+          ssh-key: ${{ secrets.SOURCE_DEPLOY_KEY }}
+          persist-credentials: false
 
       - name: Install Linux build dependencies
         if: runner.os == 'Linux'
@@ -87,7 +96,7 @@ jobs:
           tagName: v__VERSION__
           releaseName: BibleOS __VERSION__
           releaseBody: |
-            Download the file for your computer below. Install guide: https://github.com/${{ github.repository }}#install
+            Download the file for your computer below. Install guide: https://roobiwebdev.github.io/BibleOS-releases/#install
 
             - **Mac** (Apple Silicon and Intel): `BibleOS_*_universal.dmg`
             - **Windows**: `BibleOS_*_x64-setup.exe`
