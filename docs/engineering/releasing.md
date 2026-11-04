@@ -3,8 +3,9 @@
 BibleOS ships for macOS (one universal app for Apple Silicon and Intel), Windows and Linux. This source repo stays private; everything public lives in **[roobiwebdev/BibleOS-releases](https://github.com/roobiwebdev/BibleOS-releases)**:
 
 - its Releases hold the installers and `latest.json`, the update feed installed apps check when they open
-- its GitHub Pages serve the landing page at https://bible.roobi.dev/ (a `CNAME` record for `bible` in roobi.dev's Vercel DNS points at `roobiwebdev.github.io`)
-- its workflows (`release.yml`, `site.yml`) do the builds; public repos get free macOS build machines
+- its `release.yml` workflow does the builds; public repos get free macOS build machines
+
+The landing page (`apps/site`) is hosted on Vercel as the project `bibleos-site` (team roobis-projects), at https://bible.roobi.dev/. roobi.dev's DNS is on Vercel, so the subdomain needs no record of its own.
 
 The canonical copies of that repo's files are in `release-repo/` here. Change them here first, then copy them over (see "Updating the releases repo" below). The builds read this repo with a **read-only deploy key** (Settings → Deploy keys → "BibleOS-releases builds"), so they never get write access to the source.
 
@@ -63,7 +64,16 @@ The deploy key can be replaced at any time: generate a new one with `ssh-keygen 
 
 ## Updating the releases repo
 
-Edit `release-repo/` here, merge, then copy the files into a clone of `roobiwebdev/BibleOS-releases` and push. Redeploy the landing page after site changes with `gh workflow run site.yml -R roobiwebdev/BibleOS-releases -f ref=main`.
+Edit `release-repo/` here, merge, then copy the files into a clone of `roobiwebdev/BibleOS-releases` and push.
+
+## Deploying the landing page
+
+```bash
+pnpm --filter site build
+cd apps/site/dist && vercel deploy --prod --scope roobis-projects
+```
+
+The first deploy from a fresh checkout asks to link a project: choose the existing `bibleos-site`. The page reads the latest release from the GitHub API when it loads, so it only needs a redeploy when the site itself changes.
 
 ## Building locally
 

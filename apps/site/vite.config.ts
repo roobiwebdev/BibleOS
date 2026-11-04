@@ -3,7 +3,7 @@ import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 
 // Relative asset paths, so the same build works at a domain root (bible.roobi.dev) or
-// under a sub-path such as a GitHub Pages project URL.
+// under a sub-path, such as a preview URL.
 export default defineConfig({
   base: "./",
   plugins: [react(), tailwindcss()],
