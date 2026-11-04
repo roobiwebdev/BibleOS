@@ -23,6 +23,20 @@ export interface TranslationSource {
   bookNames: "source" | "catalogue";
 }
 
+/**
+ * SOURCE OF TRUTH KEYWORDS: ARCHIVE_MIRROR, archiveFileName, pinned archive mirror, bible-sources release
+ * WHAT:  Where exact copies of the pinned archives are kept: the `bible-sources` release of the
+ *        public BibleOS-releases repo, one file per archive named `<id>-<first 12 of sha256>.zip`.
+ * WHY:   eBible.org serves its zips at fixed, unversioned URLs and updates them in place, so a
+ *        pinned hash stops matching upstream. The mirror keeps every release build reproducible;
+ *        the SHA-256 is still checked, so a mirror can never change the text either.
+ * WHERE: bible-data build (tried after the local cache, before the upstream URL).
+ */
+export const ARCHIVE_MIRROR = "https://github.com/roobiwebdev/BibleOS-releases/releases/download/bible-sources/";
+
+export const archiveFileName = (source: TranslationSource): string =>
+  `${source.id}-${source.archive.sha256.slice(0, 12)}.zip`;
+
 export const TRANSLATIONS: readonly TranslationSource[] = [
   {
     id: "am-ulb",
