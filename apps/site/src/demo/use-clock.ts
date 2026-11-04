@@ -1,8 +1,6 @@
 /*
- * Playback behaviour (loop while visible, hold a settled frame for reduced motion until the
- * visitor presses play, seek by chapter) follows bible-rs (site/src/lib/demo/player.svelte.ts),
- * https://github.com/michaelshimeles/bible-rs. Copyright (c) 2026 Micky
- * (github.com/michaelshimeles). MIT License; full text in apps/site/THIRD_PARTY_NOTICES.md.
+ * Portions adapted from MIT-licensed code; the licence and copyright notice are in
+ * apps/site/THIRD_PARTY_NOTICES.md.
  */
 import { useCallback, useEffect, useState, type RefObject } from "react";
 
