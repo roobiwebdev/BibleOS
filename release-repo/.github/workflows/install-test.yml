@@ -1,0 +1,64 @@
+# Runs the one-line installers (apps/site/public/install.ps1 and install.sh) on fresh Windows,
+# Linux and macOS machines against the latest published release, and checks BibleOS is installed.
+# The canonical copy of this file lives in the source repo at release-repo/.github/workflows/.
+name: Install test
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Branch or tag of the source repo whose install scripts to test
+        required: true
+        default: main
+
+jobs:
+  install:
+    name: Install (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-22.04, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: roobiwebdev/BibleOS
+          ref: ${{ inputs.ref }}
+          ssh-key: ${{ secrets.SOURCE_DEPLOY_KEY }}
+          persist-credentials: false
+          sparse-checkout: apps/site/public
+
+      - name: Run install.ps1 (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          Get-Content apps/site/public/install.ps1 -Raw | Invoke-Expression
+          Start-Sleep -Seconds 15
+          $exe = Get-ChildItem "$env:LOCALAPPDATA\BibleOS" -Filter *.exe | Where-Object { $_.Name -notmatch 'uninstall' }
+          if (-not $exe) { Write-Output "::error::BibleOS was not installed"; exit 1 }
+          Write-Output "Installed: $($exe.FullName)"
+          $running = Get-Process | Where-Object { $_.Path -eq $exe.FullName }
+          if (-not $running) { Write-Output "::error::BibleOS did not start"; exit 1 }
+          Write-Output "Running: pid $($running.Id)"
+
+      - name: Run install.sh (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update && sudo apt-get install -y libfuse2 libwebkit2gtk-4.1-0
+          BIBLEOS_NO_OPEN=1 sh apps/site/public/install.sh
+          test -x "$HOME/.local/bin/BibleOS.AppImage"
+          test -f "$HOME/.local/share/applications/bibleos.desktop"
+          xvfb-run -a "$HOME/.local/bin/BibleOS.AppImage" &
+          sleep 15
+          pgrep -f BibleOS.AppImage >/dev/null || { echo "::error::BibleOS did not start"; exit 1; }
+          echo "BibleOS is running"
+
+      - name: Run install.sh (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          sh apps/site/public/install.sh
+          test -d /Applications/BibleOS.app
+          if xattr /Applications/BibleOS.app | grep -q quarantine; then echo "::error::quarantine flag set"; exit 1; fi
+          sleep 15
+          pgrep -f "BibleOS.app/Contents/MacOS" >/dev/null || { echo "::error::BibleOS did not start"; exit 1; }
+          echo "BibleOS is running"
