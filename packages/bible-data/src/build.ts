@@ -9,13 +9,14 @@ import { normalizeForSearch } from "@starter/bible-core/normalize";
 import { makeVerseId } from "@starter/bible-core/verse-id";
 import { unzipSync } from "fflate";
 
-import { TRANSLATIONS, type TranslationSource } from "./manifest";
+import { ARCHIVE_MIRROR, archiveFileName, TRANSLATIONS, type TranslationSource } from "./manifest";
 import { TRANSLATION_DB_SCHEMA, TRANSLATION_DB_VERSION } from "./schema";
 import { parseUsfm, type UsfmBook } from "./usfm";
 
 /**
  * SOURCE OF TRUTH KEYWORDS: buildBibles, buildTranslation, translation catalog, bible-data build, verify sha256
- * WHAT:  Build step: download each pinned archive (cached), verify its SHA-256, parse every
+ * WHAT:  Build step: fetch each pinned archive (local cache, then the project mirror, then
+ *        upstream), verify its SHA-256, parse every
  *        USFM book, and write one read-only SQLite file per translation plus catalog.json.
  *        Then compare each translation's verse coverage with the KJV grid and report gaps.
  * WHY:   Scripture ships as data built from verified upstream files, never hand-edited.
@@ -41,26 +42,42 @@ export interface CatalogEntry {
 
 const sha256 = (bytes: Uint8Array) => createHash("sha256").update(bytes).digest("hex");
 
+async function download(url: string): Promise<Uint8Array | undefined> {
+  try {
+    const response = await fetch(url);
+    return response.ok ? new Uint8Array(await response.arrayBuffer()) : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+// The first copy whose SHA-256 matches the manifest wins: cache, then mirror, then upstream.
 async function fetchArchive(source: TranslationSource): Promise<Uint8Array> {
-  const cached = join(CACHE_DIR, `${source.id}-${source.archive.sha256.slice(0, 12)}.zip`);
-  let bytes: Uint8Array;
+  const name = archiveFileName(source);
+  const cached = join(CACHE_DIR, name);
   if (existsSync(cached)) {
-    bytes = readFileSync(cached);
-  } else {
-    const response = await fetch(source.archive.url);
-    if (!response.ok) throw new Error(`${source.id}: download failed (${response.status}) ${source.archive.url}`);
-    bytes = new Uint8Array(await response.arrayBuffer());
+    const bytes = readFileSync(cached);
+    if (sha256(bytes) === source.archive.sha256) return bytes;
   }
-  const actual = sha256(bytes);
-  if (actual !== source.archive.sha256) {
-    throw new Error(
-      `${source.id}: SHA-256 mismatch. Expected ${source.archive.sha256}, got ${actual}. ` +
-        "Upstream changed; review the new file, then update manifest.ts.",
-    );
+  const seen: string[] = [];
+  for (const url of [`${ARCHIVE_MIRROR}${name}`, source.archive.url]) {
+    const bytes = await download(url);
+    if (!bytes) {
+      seen.push(`${url}: download failed`);
+      continue;
+    }
+    const actual = sha256(bytes);
+    if (actual === source.archive.sha256) {
+      mkdirSync(CACHE_DIR, { recursive: true });
+      writeFileSync(cached, bytes);
+      return bytes;
+    }
+    seen.push(`${url}: SHA-256 ${actual}`);
   }
-  mkdirSync(CACHE_DIR, { recursive: true });
-  if (!existsSync(cached)) writeFileSync(cached, bytes);
-  return bytes;
+  throw new Error(
+    `${source.id}: no copy matches the pinned SHA-256 ${source.archive.sha256}.\n  ${seen.join("\n  ")}\n` +
+      "If upstream changed, review the new file, then update manifest.ts and the mirror.",
+  );
 }
 
 function readBooks(source: TranslationSource, archive: Uint8Array): UsfmBook[] {
