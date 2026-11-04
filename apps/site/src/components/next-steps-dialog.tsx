@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import { PLATFORMS } from "../config";
 import { COPY } from "../copy";
 import { useNextSteps } from "../lib/next-steps";
+import { OneCommandInstall } from "./one-command-install";
 import { InstallSteps } from "./install-steps";
 
 /**
@@ -62,6 +63,10 @@ export function NextStepsDialog() {
           </div>
 
           <div className="mt-6">
+            <OneCommandInstall platform={open} />
+            <p className="mt-6 mb-4 text-[13px] font-medium tracking-wide text-muted-foreground uppercase">
+              {COPY.oneCommand.usual}
+            </p>
             <InstallSteps platform={open} compact />
           </div>
           <p className="mt-5 text-[13.5px] leading-relaxed text-muted-foreground">{COPY.install.platforms[open].tip}</p>
