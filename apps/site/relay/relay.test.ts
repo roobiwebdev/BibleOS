@@ -83,6 +83,16 @@ describe("ESV parsing", () => {
     expect(url.searchParams.get("include-footnotes")).toBe("false");
     expect(url.searchParams.get("include-short-copyright")).toBe("false");
   });
+
+  it("asks for the whole book in one-chapter books, where Crossway reads '3 John 1' as one verse", () => {
+    const q = (book: string) =>
+      new URL(esvPassageUrl({ kind: "chapter", t: "en-esv", book, chapter: 1 })).searchParams.get("q");
+    expect(q("3JN")).toBe("3 John");
+    expect(q("OBA")).toBe("Obadiah");
+    expect(q("GEN")).toBe("Genesis 1");
+    const range = esvPassageUrl({ kind: "verses", t: "en-esv", book: "3JN", chapter: 1, from: 1, to: 4 });
+    expect(new URL(range).searchParams.get("q")).toBe("3 John 1:1-4");
+  });
 });
 
 describe("NLT parsing (recorded responses)", () => {

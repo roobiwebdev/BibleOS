@@ -27,10 +27,14 @@ const ESV_NAMES: Readonly<Record<string, string>> = { SNG: "Song of Solomon" };
 export function esvPassageUrl(request: PassageRequest): string {
   const book = bookByCode(request.book);
   const name = ESV_NAMES[request.book] ?? book?.en.name ?? request.book;
+  // In one-chapter books (OBA, PHM, 2JN, 3JN, JUD) Crossway reads "3 John 1" as verse 1, so
+  // ask for the whole book; verse ranges stay explicit ("3 John 1:1-4" works as expected).
   const q =
     request.kind === "verses"
       ? `${name} ${request.chapter}:${request.from}-${request.to}`
-      : `${name} ${request.chapter}`;
+      : book?.chapters === 1
+        ? name
+        : `${name} ${request.chapter}`;
   const params = new URLSearchParams({
     q,
     "include-passage-references": "false",
