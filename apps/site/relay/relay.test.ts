@@ -131,6 +131,22 @@ describe("NLT parsing (recorded responses)", () => {
     expect(verses.find((v) => v.vid === 43_003_016)?.text).toMatch(/^“For this is how God loved the world/);
   });
 
+  it("keeps Psalm 119's Hebrew letters as headings, not verse text", () => {
+    const { verses, headings } = parseNltPassage(fixture("nlt-psalm-119-1-9.html"), chapter("PSA", 119), {
+      start: 19_119_001,
+      end: 19_119_009,
+    });
+    expect(verses).toHaveLength(9);
+    expect(verses[0]?.text).toMatch(/^Joyful are people of integrity/);
+    expect(verses.find((v) => v.vid === 19_119_009)?.text).toMatch(/^How can a young person/);
+    expect(headings.map((h) => [h.vid, h.text])).toEqual(
+      expect.arrayContaining([
+        [19_119_001, "Aleph"],
+        [19_119_009, "Beth"],
+      ]),
+    );
+  });
+
   it("reads search rows and the result count", () => {
     const result = parseNltSearch(fixture("nlt-search-living-water.html"));
     expect(result.total).toBe(24);

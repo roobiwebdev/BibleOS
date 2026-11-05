@@ -61,6 +61,8 @@ export function parseNltPassage(
     }
     if (tag.tag === "h3" || tag.tag === "h4") return { kind: "heading", level: hasClass(tag, "subhead") ? "s" : "d" };
     if (tag.tag === "p" && hasClass(tag, "psa-title")) return { kind: "heading", level: "d" };
+    // Psalm 119's Hebrew letter stanzas ("Aleph", "Beth"…); the bundled BSB stores these as section headings too.
+    if (tag.tag === "h5" && hasClass(tag, "psa-hebrew")) return { kind: "heading", level: "s" };
     if (tag.tag === "p") {
       if (classStartsWith(tag, "poet2")) return { kind: "block", style: "q2" };
       if (classStartsWith(tag, "poet")) return { kind: "block", style: "q1" };
