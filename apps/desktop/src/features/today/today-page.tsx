@@ -2,18 +2,19 @@ import { bookByCode, bookByOrd } from "@starter/bible-core/books";
 import { formatRange } from "@starter/bible-core/range";
 import { dayKeyToJdn, formatDay } from "@starter/bible-core/calendar";
 import { chapterOf, splitVerseId, verseIdFromCode, type VerseId } from "@starter/bible-core/verse-id";
-import { TRANSLATIONS } from "@starter/bible-data/manifest";
 import { Button } from "@starter/ui/components/button";
 import { Textarea } from "@starter/ui/components/textarea";
 import { Link } from "@tanstack/react-router";
 import { ArrowRight, Check, Sparkles } from "lucide-react";
 import { useState } from "react";
 
+import { OnlineAttribution, OnlineUnavailable } from "../../components/online-text";
 import { Card, Eyebrow, Page, PageHeader } from "../../components/page";
 import { WeekDots } from "../../components/week-dots";
 import { TodaysReading } from "../plans/todays-reading";
 import type { ChapterData } from "../../lib/bible/source";
-import { useChapter } from "../../lib/bible/use-chapter";
+import { findReaderTranslation, isOnline } from "../../lib/bible/catalog";
+import { useChapter, usePassage } from "../../lib/bible/use-chapter";
 import { useNow } from "../../lib/state/clock";
 import { usePreferences, useT } from "../../lib/state/preferences";
 import { useStudy } from "../../lib/state/study-store";
@@ -49,9 +50,12 @@ export function TodayPage() {
   const votd = verseIdFromCode(code, ch, vs) ?? 0;
   // The 1962 Amharic text is New Testament only; Old Testament verses come from the full ULB.
   const amharicId = bookByCode(code)?.testament === "OT" ? "am-ulb" : "am-1962-nt";
-  const englishId =
-    TRANSLATIONS.find((x) => x.id === prefs.mainTranslation)?.language === "en" ? prefs.mainTranslation : "en-bsb";
-  const votdEn = verseIn(useChapter(englishId, chapterOf(votd)), votd);
+  const mainMeta = findReaderTranslation(prefs.mainTranslation);
+  const englishId = mainMeta?.language === "en" ? prefs.mainTranslation : "en-bsb";
+  const englishMeta = findReaderTranslation(englishId);
+  // Just the one verse, so an online translation asks its publisher for one verse, not a chapter.
+  const votdLoad = usePassage(englishId, { start: votd, end: votd });
+  const votdEn = votdLoad.data?.find((v) => v.vid <= votd && v.spanEnd >= votd);
   const votdAm = verseIn(useChapter(amharicId, chapterOf(votd)), votd);
 
   const last = splitVerseId(study.lastRead);
@@ -83,9 +87,21 @@ export function TodayPage() {
               <Sparkles className="mr-1.5 inline size-3.5 -translate-y-px" />
               {t.today.verseOfDay}
             </Eyebrow>
-            <blockquote lang="en" className="scripture text-[1.35em] leading-snug">
-              {votdEn?.text ?? "…"}
-            </blockquote>
+            {votdLoad.error && isOnline(englishMeta) ? (
+              <OnlineUnavailable
+                compact
+                abbreviation={englishMeta.abbreviation}
+                reason={votdLoad.error}
+                onRetry={votdLoad.retry}
+              />
+            ) : votdLoad.data && !votdEn ? (
+              <p className="text-sm text-muted-foreground">{t.online.notInText(englishMeta?.abbreviation ?? "")}</p>
+            ) : (
+              <blockquote lang="en" className="scripture text-[1.35em] leading-snug">
+                {votdEn?.text ?? "…"}
+              </blockquote>
+            )}
+            {isOnline(englishMeta) && votdEn && <OnlineAttribution translation={englishMeta} className="mt-2" />}
             <blockquote lang="am" className="scripture mt-4 text-[1.05em] text-foreground/80">
               {votdAm?.text ?? ""}
             </blockquote>
@@ -110,12 +126,10 @@ export function TodayPage() {
                 <p className="text-lg font-semibold">
                   {lastBook?.[prefs.locale].short} {last.chapter}
                 </p>
-                <p
-                  lang={TRANSLATIONS.find((x) => x.id === prefs.mainTranslation)?.language}
-                  className="scripture mt-1 line-clamp-2 text-[0.9em] text-muted-foreground"
-                >
+                <p lang={mainMeta?.language} className="scripture mt-1 line-clamp-2 text-[0.9em] text-muted-foreground">
                   {snippet}
                 </p>
+                {isOnline(mainMeta) && snippet && <OnlineAttribution translation={mainMeta} className="mt-1" />}
               </div>
               <Button asChild>
                 <Link to="/read" search={{ c: chapterOf(study.lastRead), v: last.verse || undefined }}>

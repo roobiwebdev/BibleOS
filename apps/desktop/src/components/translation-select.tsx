@@ -1,9 +1,11 @@
-import { TRANSLATIONS } from "@starter/bible-data/manifest";
 import { ChevronDown } from "lucide-react";
+
+import { isOnline, READER_TRANSLATIONS } from "../lib/bible/catalog";
+import { useT } from "../lib/state/preferences";
 
 /**
  * SOURCE OF TRUTH KEYWORDS: TranslationSelect, translation dropdown, choose translation
- * WHAT:  A native select listing every bundled translation by abbreviation and name.
+ * WHAT:  A native select listing every translation by abbreviation and name, online ones marked.
  * WHY:   Settings and the first-run Welcome choose the main and side-by-side translations
  *        from the same list (the manifest).
  * WHERE: settings page, Welcome.
@@ -17,6 +19,7 @@ export function TranslationSelect({
   onChange: (id: string) => void;
   labelledBy: string;
 }) {
+  const t = useT();
   return (
     <div className="relative">
       <select
@@ -25,9 +28,10 @@ export function TranslationSelect({
         onChange={(e) => onChange(e.target.value)}
         className="h-8 max-w-64 appearance-none truncate rounded-lg border border-input bg-background pl-3 pr-8 text-[13px]"
       >
-        {TRANSLATIONS.map((t) => (
-          <option key={t.id} value={t.id}>
-            {t.abbreviation} · {t.name}
+        {READER_TRANSLATIONS.map((tr) => (
+          <option key={tr.id} value={tr.id}>
+            {tr.abbreviation} · {tr.name}
+            {isOnline(tr) ? ` (${t.online.online})` : ""}
           </option>
         ))}
       </select>

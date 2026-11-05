@@ -2,18 +2,17 @@ import { bookByOrd } from "@starter/bible-core/books";
 import { addDays, dayKeyOf, formatDay, type DayKey } from "@starter/bible-core/calendar";
 import { formatRange } from "@starter/bible-core/range";
 import { chapterOf, splitVerseId, type VerseId } from "@starter/bible-core/verse-id";
-import { TRANSLATIONS } from "@starter/bible-data/manifest";
 import { Button } from "@starter/ui/components/button";
 import { Link } from "@tanstack/react-router";
 import { ArrowRight, BookOpen, History } from "lucide-react";
 
 import { Card, Eyebrow, Page, PageHeader } from "../../components/page";
+import { findReaderTranslation } from "../../lib/bible/catalog";
 import { useToday } from "../../lib/state/clock";
 import { usePreferences, useT } from "../../lib/state/preferences";
 import { useReadingHistory } from "./use-history";
 
-const abbreviation = (translationId: string) =>
-  TRANSLATIONS.find((x) => x.id === translationId)?.abbreviation ?? translationId;
+const abbreviation = (translationId: string) => findReaderTranslation(translationId)?.abbreviation ?? translationId;
 
 /** "John 3" in the interface language, for a chapter id. */
 function useChapterName(): (chapterVid: VerseId) => string {

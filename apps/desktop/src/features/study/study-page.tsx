@@ -2,7 +2,6 @@ import { normalizeForSearch } from "@starter/bible-core/normalize";
 import { formatRange, overlaps, type VerseRange } from "@starter/bible-core/range";
 import { referenceRange } from "@starter/bible-core/reference";
 import { chapterOf, splitVerseId } from "@starter/bible-core/verse-id";
-import { TRANSLATIONS } from "@starter/bible-data/manifest";
 import { Button } from "@starter/ui/components/button";
 import { Input } from "@starter/ui/components/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@starter/ui/components/tabs";
@@ -17,8 +16,10 @@ import { z } from "zod";
 import { HIGHLIGHT_BG } from "../../components/highlight-colors";
 import { linkedReferences, NoteBody } from "../../components/note-body";
 import { NoteEditor } from "../../components/note-editor";
+import { OnlineAttribution, OnlineUnavailable } from "../../components/online-text";
 import { Page, PageHeader } from "../../components/page";
-import { useChapter } from "../../lib/bible/use-chapter";
+import { findReaderTranslation, isOnline } from "../../lib/bible/catalog";
+import { usePassage } from "../../lib/bible/use-chapter";
 import { useFormatDate } from "../../lib/format";
 import { usePreferences, useT } from "../../lib/state/preferences";
 import { HIGHLIGHT_COLORS, useStudy, type Bookmark, type HighlightColor, type Note } from "../../lib/state/study-store";
@@ -27,21 +28,44 @@ import { studyRoute } from "../../router";
 /**
  * SOURCE OF TRUTH KEYWORDS: PassageText, passage text, verse text for a range
  * WHAT:  The text of a verse range in the reader's main translation, with its language set.
+ *        Online translations show their attribution, or "needs internet" with a retry.
  * WHY:   Study lists show the words themselves, not just references.
  * WHERE: Study notes, highlights, collections and bookmarks.
  */
 function PassageText({ range, className }: { range: VerseRange; className?: string }) {
+  const t = useT();
   const { prefs } = usePreferences();
-  const data = useChapter(prefs.mainTranslation, chapterOf(range.start));
-  const lang = TRANSLATIONS.find((x) => x.id === prefs.mainTranslation)?.language ?? "en";
-  const text = data?.verses
-    .filter((v) => overlaps(range, { start: v.vid, end: v.spanEnd }))
+  const passage = usePassage(prefs.mainTranslation, range);
+  const meta = findReaderTranslation(prefs.mainTranslation);
+  const lang = meta?.language ?? "en";
+  const text = passage.data
+    ?.filter((v) => overlaps(range, { start: v.vid, end: v.spanEnd }))
     .map((v) => v.text.replace(/\n/g, " "))
     .join(" ");
+  if (passage.error && isOnline(meta)) {
+    return (
+      <OnlineUnavailable
+        compact
+        abbreviation={meta.abbreviation}
+        reason={passage.error}
+        onRetry={passage.retry}
+        className={className}
+      />
+    );
+  }
+  if (passage.data && !text) {
+    // The translation leaves this verse out (the ESV and NLT move Matthew 17:21 to a footnote).
+    return (
+      <p className={cn("text-xs text-muted-foreground", className)}>{t.online.notInText(meta?.abbreviation ?? "")}</p>
+    );
+  }
   return (
-    <p lang={lang} className={cn("scripture", className)}>
-      {text || "…"}
-    </p>
+    <>
+      <p lang={lang} className={cn("scripture", className)}>
+        {text || "…"}
+      </p>
+      {isOnline(meta) && text && <OnlineAttribution translation={meta} className="mt-1" />}
+    </>
   );
 }
 

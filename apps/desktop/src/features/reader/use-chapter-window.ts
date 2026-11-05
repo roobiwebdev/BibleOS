@@ -1,5 +1,6 @@
 import { bookByOrd } from "@starter/bible-core/books";
 import { makeVerseId, splitVerseId, type VerseId } from "@starter/bible-core/verse-id";
+import { isOnlineTranslationId, ONLINE_LIMITS } from "@starter/bible-data/online";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type RefObject } from "react";
 
 import { loadChapterWithFallback, type ShownChapter } from "../../lib/bible/use-chapter";
@@ -52,6 +53,53 @@ async function loadWindowChapter(t: Translations, vid: VerseId): Promise<WindowC
   return { vid, main, second };
 }
 
+/**
+ * SOURCE OF TRUTH KEYWORDS: fitsOnlineLimits, trimForOnline, display limit, half a book, 500 verses on screen
+ * WHAT:  Whether the mounted chapters keep each online translation within its publisher's
+ *        display limit: at most 500 verses, and at most half of a book's chapters (one chapter
+ *        is always allowed), and trimming the window from the far side until they do.
+ * WHY:   ESV terms: "You may not display more than 500 verses or one-half of any book (whichever
+ *        is less) on any page." The continuous reader is one page, so it keeps fewer chapters
+ *        mounted for online text. Half a book is counted in chapters; bundled text is unlimited.
+ * WHERE: useChapterWindow (loading the next chapter, translation changes).
+ */
+export function fitsOnlineLimits(chapters: readonly WindowChapter[]): boolean {
+  const shown = new Map<string, { verses: number; chapters: Map<number, number> }>();
+  for (const chapter of chapters) {
+    for (const text of [chapter.main, chapter.second]) {
+      if (!text || !isOnlineTranslationId(text.id) || text.data.verses.length === 0) continue;
+      const entry = shown.get(text.id) ?? { verses: 0, chapters: new Map<number, number>() };
+      const { ord } = splitVerseId(chapter.vid);
+      entry.verses += text.data.verses.length;
+      entry.chapters.set(ord, (entry.chapters.get(ord) ?? 0) + 1);
+      shown.set(text.id, entry);
+    }
+  }
+  for (const entry of shown.values()) {
+    if (entry.verses > ONLINE_LIMITS.versesShown) return false;
+    for (const [ord, count] of entry.chapters) {
+      if (count > Math.max(1, Math.floor((bookByOrd(ord)?.chapters ?? 1) / 2))) return false;
+    }
+  }
+  return true;
+}
+
+export function trimForOnline(
+  chapters: WindowChapter[],
+  keep: VerseId | undefined,
+  direction: 1 | -1,
+): WindowChapter[] {
+  let out = chapters;
+  while (out.length > 1 && !fitsOnlineLimits(out)) {
+    // Drop from the side the reader is moving away from, never the chapter in view.
+    const dropFirst = direction > 0 ? out[0]?.vid !== keep : out.at(-1)?.vid === keep;
+    out = dropFirst ? out.slice(1) : out.slice(0, -1);
+  }
+  return out;
+}
+
+const failed = (chapter: WindowChapter | undefined) => Boolean(chapter?.main.error ?? chapter?.second?.error);
+
 /** Where the first visible chapter sits, so it can be put back after content above it changes. */
 function anchorOf(scroller: HTMLElement | null): { vid: VerseId; top: number } | null {
   if (!scroller) return null;
@@ -91,6 +139,10 @@ export function useChapterWindow(scrollRef: RefObject<HTMLDivElement | null>, tr
   });
 
   const busy = useRef(false);
+  // The next chapter the online display limit kept out, and the chapter in view then; it is not
+  // asked for again until the reader moves to another chapter.
+  const blocked = useRef<{ next: VerseId; inView: VerseId | undefined } | null>(null);
+  const [limited, setLimited] = useState(false);
   const generation = useRef(0);
   const anchor = useRef<{ vid: VerseId; top: number } | null>(null);
   const pendingScroll = useRef<{ vid: VerseId; verse?: VerseId; smooth: boolean } | null>(null);
@@ -132,8 +184,11 @@ export function useChapterWindow(scrollRef: RefObject<HTMLDivElement | null>, tr
           : 0;
     if (direction === 0) return;
     const edge = direction > 0 ? current.chapters.at(-1) : current.chapters[0];
+    // Past a chapter that could not load (no internet), wait for a retry instead of asking again.
+    if (failed(edge)) return;
     const nextVid = edge && adjacentChapter(edge.vid, direction);
     if (nextVid === undefined) return;
+    if (blocked.current?.next === nextVid && blocked.current.inView === inViewRef.current) return;
     busy.current = true;
     const gen = generation.current;
     void loadWindowChapter(translationsRef.current, nextVid)
@@ -152,6 +207,14 @@ export function useChapterWindow(scrollRef: RefObject<HTMLDivElement | null>, tr
               ? chapters.slice(Math.max(0, centre - KEEP_BEHIND))
               : chapters.slice(0, centre + KEEP_BEHIND + 1);
         }
+        chapters = trimForOnline(chapters, inViewRef.current, direction);
+        if (!chapters.includes(next)) {
+          blocked.current = { next: nextVid, inView: inViewRef.current };
+          setLimited(true);
+          return;
+        }
+        blocked.current = null;
+        setLimited(false);
         anchor.current = anchorOf(scroller);
         setState({ key: current.key, chapters });
       })
@@ -216,10 +279,31 @@ export function useChapterWindow(scrollRef: RefObject<HTMLDivElement | null>, tr
       const chapter = await loadWindowChapter(translationsRef.current, vid);
       if (gen !== generation.current) return;
       pendingScroll.current = { vid, verse, smooth: false };
+      blocked.current = null;
+      setLimited(false);
       setInView(vid);
       setState({ key: keyOf(translationsRef.current), chapters: [chapter] });
     },
     [scrollToTarget],
+  );
+
+  /** Loads the mounted chapters again for the current translations, kept within online limits. */
+  const reload = useCallback(
+    (key: string) => {
+      const current = stateRef.current;
+      const gen = ++generation.current;
+      void Promise.all(current.chapters.map((c) => loadWindowChapter(translationsRef.current, c.vid))).then(
+        (loaded) => {
+          if (gen !== generation.current) return;
+          const chapters = trimForOnline(loaded, inViewRef.current, 1);
+          blocked.current = null;
+          setLimited(chapters.length < loaded.length);
+          anchor.current = anchorOf(scrollRef.current);
+          setState({ key, chapters });
+        },
+      );
+    },
+    [scrollRef],
   );
 
   // A translation or parallel change reloads the mounted chapters in place.
@@ -227,15 +311,13 @@ export function useChapterWindow(scrollRef: RefObject<HTMLDivElement | null>, tr
   useEffect(() => {
     const current = stateRef.current;
     if (current.key === key || current.chapters.length === 0) return;
-    const gen = ++generation.current;
-    void Promise.all(current.chapters.map((c) => loadWindowChapter(translationsRef.current, c.vid))).then(
-      (chapters) => {
-        if (gen !== generation.current) return;
-        anchor.current = anchorOf(scrollRef.current);
-        setState({ key, chapters });
-      },
-    );
-  }, [key, scrollRef]);
+    reload(key);
+  }, [key, reload]);
 
-  return { chapters: state.chapters, inView, jumpTo, onScroll: checkEdges };
+  /** Tries online chapters that failed (no internet) again. */
+  const retry = useCallback(() => {
+    if (stateRef.current.chapters.length > 0) reload(stateRef.current.key);
+  }, [reload]);
+
+  return { chapters: state.chapters, inView, jumpTo, onScroll: checkEdges, retry, limited };
 }

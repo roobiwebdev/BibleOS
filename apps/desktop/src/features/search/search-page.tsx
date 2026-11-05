@@ -20,8 +20,10 @@ import { useNavigate } from "@tanstack/react-router";
 import { ArrowRight, BookOpen, Check, ChevronDown, Search, X } from "lucide-react";
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 
+import { OnlineAttribution, OnlineUnavailable } from "../../components/online-text";
 import { Page, PageHeader } from "../../components/page";
 import { TranslationMenu } from "../../components/translation-menu";
+import { findReaderTranslation, isOnline } from "../../lib/bible/catalog";
 import type { SearchVerse } from "../../lib/bible/source";
 import { usePreferences, useT } from "../../lib/state/preferences";
 import { searchRoute } from "../../router";
@@ -166,8 +168,7 @@ export function SearchPage() {
   const navigate = useNavigate({ from: "/search" });
   const params = searchRoute.useSearch();
   const q = params.q ?? "";
-  const translation =
-    TRANSLATIONS.find((x) => x.id === params.t) ?? TRANSLATIONS.find((x) => x.id === prefs.mainTranslation);
+  const translation = findReaderTranslation(params.t) ?? findReaderTranslation(prefs.mainTranslation);
   const translationId = translation?.id ?? prefs.mainTranslation;
   const lang: Language = translation?.language ?? "en";
   const locale = prefs.locale;
@@ -345,6 +346,13 @@ export function SearchPage() {
           t.search.tips
         ) : ntOnlyMiss ? (
           t.search.ntOnly
+        ) : search.failed && isOnline(translation) ? (
+          <OnlineUnavailable
+            compact
+            abbreviation={translation.abbreviation}
+            reason={search.error ?? "failed"}
+            onRetry={search.retry}
+          />
         ) : search.failed ? (
           t.search.failed
         ) : search.loading && !data ? (
@@ -358,9 +366,18 @@ export function SearchPage() {
             </span>
             {search.ms !== undefined && <span>· {t.search.elapsed(search.ms)}</span>}
             {search.loading && <span>· {t.search.searching}</span>}
+            {data.online && data.online.total > data.online.received && (
+              <span>· {t.online.searchReceived(data.online.received, data.online.total)}</span>
+            )}
           </>
         ) : null}
       </p>
+      {isOnline(translation) && trimmed && (
+        <div className="-mt-1 mb-3 flex flex-wrap items-center gap-x-2 text-xs text-muted-foreground">
+          <span>{t.online.searchOnline(translation.abbreviation)}</span>
+          <OnlineAttribution translation={translation} />
+        </div>
+      )}
 
       {data && data.perBook.length > 1 && !bookByCode(scope) && trimmed && !ntOnlyMiss && (
         <div role="group" aria-label={t.search.byBook} className="mb-4 flex flex-wrap gap-1.5">

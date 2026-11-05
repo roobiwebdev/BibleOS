@@ -2,7 +2,6 @@ import { bookByOrd } from "@starter/bible-core/books";
 import { alignParallel } from "@starter/bible-core/parallel";
 import { chapterRange, formatRange, overlaps, type VerseRange } from "@starter/bible-core/range";
 import { chapterOf, makeVerseId, splitVerseId, type VerseId } from "@starter/bible-core/verse-id";
-import { TRANSLATIONS } from "@starter/bible-data/manifest";
 import { Button } from "@starter/ui/components/button";
 import {
   DropdownMenu,
@@ -43,7 +42,9 @@ import {
 
 import { BookmarkButton } from "../../components/bookmark-button";
 import { HIGHLIGHT_BG } from "../../components/highlight-colors";
+import { OnlineAttribution, OnlineUnavailable } from "../../components/online-text";
 import { TranslationMenu } from "../../components/translation-menu";
+import { findReaderTranslation, isOnline } from "../../lib/bible/catalog";
 import type { ChapterVerse } from "../../lib/bible/source";
 import { useAvailableChapters } from "../../lib/bible/use-chapter";
 import { hasOverlayTitleBar } from "../../lib/platform";
@@ -109,7 +110,8 @@ const MARK_READ_AFTER_MS = 2_000;
 /**
  * SOURCE OF TRUTH KEYWORDS: ChapterSection, continuous reader chapter, chapter block, fallback notice
  * WHAT:  One chapter inside the continuous reader: book and chapter heading, the fallback
- *        notice when a translation lacks the book, and the text (single or parallel).
+ *        notice when a translation lacks the book, the attribution line for online text (ESV,
+ *        NLT) or its "needs internet" message, and the text (single or parallel).
  * WHY:   Each mounted chapter carries its own translations and notices, so the Old Testament
  *        fallback appears exactly on the chapters it applies to.
  * WHERE: reader page.
@@ -118,21 +120,31 @@ function ChapterSection({
   chapter,
   parallel,
   decor,
+  onRetry,
 }: {
   chapter: WindowChapter;
   parallel: boolean;
   decor: VerseDecor;
+  onRetry: () => void;
 }) {
   const t = useT();
   const { prefs } = usePreferences();
   const { ord, chapter: number } = splitVerseId(chapter.vid);
   const book = bookByOrd(ord);
-  const mainMeta = TRANSLATIONS.find((x) => x.id === chapter.main.id);
-  const secondMeta = TRANSLATIONS.find((x) => x.id === chapter.second?.id);
+  const mainMeta = findReaderTranslation(chapter.main.id);
+  const secondMeta = findReaderTranslation(chapter.second?.id);
   const second = parallel ? chapter.second : undefined;
+  const online = [
+    { meta: mainMeta, shown: chapter.main },
+    ...(second ? [{ meta: secondMeta, shown: second }] : []),
+  ].flatMap(({ meta, shown }) => (isOnline(meta) ? [{ meta, shown }] : []));
+  // When one side could not be loaded (online text without a connection), the other is read alone.
+  const columns = second && !chapter.main.error && !second.error ? second : undefined;
+  const solo = chapter.main.error && second && !second.error ? second : chapter.main;
+  const soloMeta = solo === chapter.main ? mainMeta : secondMeta;
   const rows = useMemo(
-    () => (second ? alignParallel([chapter.main.data.verses, second.data.verses]) : []),
-    [chapter.main, second],
+    () => (columns ? alignParallel([chapter.main.data.verses, columns.data.verses]) : []),
+    [chapter.main, columns],
   );
   const notices = [chapter.main.replaced, second?.replaced].filter((x) => x !== undefined);
   const title = `${book?.[prefs.locale].short ?? ""} ${number}`;
@@ -151,8 +163,27 @@ function ChapterSection({
           {t.read.fallback(n.missing?.abbreviation ?? "", n.shown?.name ?? "")}
         </p>
       ))}
+      {online.map(({ meta, shown }) =>
+        shown.error ? (
+          // Without its main text the chapter is just this message; a missing side column is a line.
+          shown === chapter.main ? (
+            <OnlineUnavailable key={meta.id} abbreviation={meta.abbreviation} reason={shown.error} onRetry={onRetry} />
+          ) : (
+            <OnlineUnavailable
+              key={meta.id}
+              compact
+              abbreviation={meta.abbreviation}
+              reason={shown.error}
+              onRetry={onRetry}
+              className="mt-4 mb-6 justify-center"
+            />
+          )
+        ) : shown.data.verses.length > 0 ? (
+          <OnlineAttribution key={meta.id} translation={meta} className="mb-6 justify-center" />
+        ) : null,
+      )}
       <div role="document" aria-describedby="reader-hint" aria-label={title}>
-        {second ? (
+        {columns ? (
           <>
             <div className="mb-6 hidden grid-cols-2 gap-x-12 border-b pb-2 font-sans text-xs font-medium text-muted-foreground @3xl:grid">
               <span lang={mainMeta?.language}>{mainMeta?.name}</span>
@@ -168,9 +199,9 @@ function ChapterSection({
           </>
         ) : (
           <ChapterText
-            verses={chapter.main.data.verses}
-            headings={chapter.main.data.headings}
-            lang={mainMeta?.language ?? "en"}
+            verses={solo.data.verses}
+            headings={solo.data.headings}
+            lang={soloMeta?.language ?? "en"}
             decor={decor}
           />
         )}
@@ -203,7 +234,7 @@ export function ReaderPage() {
   const narrow = useNarrow();
   // On narrow windows the rail floats over the text, so it opens only when asked for.
   const [overlayRail, setOverlayRail] = useState(false);
-  const mainMeta = TRANSLATIONS.find((x) => x.id === (currentChapter?.main.id ?? prefs.mainTranslation));
+  const mainMeta = findReaderTranslation(currentChapter?.main.id ?? prefs.mainTranslation);
   const inPreview = available === undefined || available.includes(urlChapter);
 
   // Every mounted verse in reading order, so the keyboard cursor flows across chapters.
@@ -474,9 +505,14 @@ export function ReaderPage() {
                 {win.chapters.map((c, i) => (
                   <Fragment key={c.vid}>
                     {i > 0 && <hr aria-hidden className="mx-auto w-24 border-border" />}
-                    <ChapterSection chapter={c} parallel={prefs.parallel} decor={decor} />
+                    <ChapterSection chapter={c} parallel={prefs.parallel} decor={decor} onRetry={win.retry} />
                   </Fragment>
                 ))}
+                {win.limited && (
+                  <p className="mx-auto mt-2 max-w-md text-center font-sans text-xs text-muted-foreground">
+                    {t.online.windowLimit}
+                  </p>
+                )}
                 {win.chapters.length > 0 && (
                   <p id="reader-hint" className="mt-4 text-center font-sans text-[11px] text-muted-foreground">
                     {t.read.keyboardHint}
