@@ -117,7 +117,7 @@ export const TRANSLATIONS: readonly TranslationSource[] = [
   {
     id: "am-2005",
     language: "am",
-    name: "አማርኛ አዲሱ መደበኛ ትርጉም (አም05)",
+    name: "Amharic 2005 · አዲሱ መደበኛ ትርጉም (አም05)",
     abbreviation: "2005",
     scope: "bible",
     licence: {
