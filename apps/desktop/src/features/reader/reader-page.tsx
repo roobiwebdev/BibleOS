@@ -135,6 +135,8 @@ function ChapterSection({
     [chapter.main, second],
   );
   const notices = [chapter.main.replaced, second?.replaced].filter((x) => x !== undefined);
+  // The Amharic 2005 has no section headings; side by side, the other text's headings mark the passage.
+  const headingsFromSecond = second !== undefined && chapter.main.data.headings.length === 0;
   const title = `${book?.[prefs.locale].short ?? ""} ${number}`;
 
   return (
@@ -161,7 +163,8 @@ function ChapterSection({
             <ParallelText
               rows={rows}
               langs={[mainMeta?.language ?? "en", secondMeta?.language ?? "en"]}
-              headings={chapter.main.data.headings}
+              headings={headingsFromSecond ? second.data.headings : chapter.main.data.headings}
+              headingsLang={(headingsFromSecond ? secondMeta?.language : mainMeta?.language) ?? "en"}
               decor={decor}
               emptyLabel="—"
             />

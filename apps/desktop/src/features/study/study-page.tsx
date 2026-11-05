@@ -1,8 +1,8 @@
+import { bookByOrd } from "@starter/bible-core/books";
 import { normalizeForSearch } from "@starter/bible-core/normalize";
 import { formatRange, overlaps, type VerseRange } from "@starter/bible-core/range";
 import { referenceRange } from "@starter/bible-core/reference";
 import { chapterOf, splitVerseId } from "@starter/bible-core/verse-id";
-import { TRANSLATIONS } from "@starter/bible-data/manifest";
 import { Button } from "@starter/ui/components/button";
 import { Input } from "@starter/ui/components/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@starter/ui/components/tabs";
@@ -18,6 +18,7 @@ import { HIGHLIGHT_BG } from "../../components/highlight-colors";
 import { linkedReferences, NoteBody } from "../../components/note-body";
 import { NoteEditor } from "../../components/note-editor";
 import { Page, PageHeader } from "../../components/page";
+import { covers, findTranslation, pickTranslation } from "../../lib/bible/translations";
 import { useChapter } from "../../lib/bible/use-chapter";
 import { useFormatDate } from "../../lib/format";
 import { usePreferences, useT } from "../../lib/state/preferences";
@@ -26,14 +27,20 @@ import { studyRoute } from "../../router";
 
 /**
  * SOURCE OF TRUTH KEYWORDS: PassageText, passage text, verse text for a range
- * WHAT:  The text of a verse range in the reader's main translation, with its language set.
+ * WHAT:  The text of a verse range in the reader's main translation (or, for a book it lacks,
+ *        the featured text in its language), with its language set.
  * WHY:   Study lists show the words themselves, not just references.
  * WHERE: Study notes, highlights, collections and bookmarks.
  */
 function PassageText({ range, className }: { range: VerseRange; className?: string }) {
   const { prefs } = usePreferences();
-  const data = useChapter(prefs.mainTranslation, chapterOf(range.start));
-  const lang = TRANSLATIONS.find((x) => x.id === prefs.mainTranslation)?.language ?? "en";
+  // A New Testament only main text shows Old Testament passages from its language's featured text.
+  const testament = bookByOrd(splitVerseId(range.start).ord)?.testament;
+  const main = findTranslation(prefs.mainTranslation);
+  const shown =
+    main && covers(main, testament) ? main : (pickTranslation(main?.language ?? "am", { testament }) ?? main);
+  const data = useChapter(shown?.id ?? prefs.mainTranslation, chapterOf(range.start));
+  const lang = shown?.language ?? "en";
   const text = data?.verses
     .filter((v) => overlaps(range, { start: v.vid, end: v.spanEnd }))
     .map((v) => v.text.replace(/\n/g, " "))

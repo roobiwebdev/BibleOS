@@ -1,8 +1,8 @@
-import { bookByCode, bookByOrd } from "@starter/bible-core/books";
+import { bookByCode, bookByOrd, type Locale } from "@starter/bible-core/books";
 import { formatRange } from "@starter/bible-core/range";
 import { dayKeyToJdn, formatDay } from "@starter/bible-core/calendar";
 import { chapterOf, splitVerseId, verseIdFromCode, type VerseId } from "@starter/bible-core/verse-id";
-import { TRANSLATIONS } from "@starter/bible-data/manifest";
+import { DEFAULT_TRANSLATIONS } from "@starter/local-api/schemas";
 import { Button } from "@starter/ui/components/button";
 import { Textarea } from "@starter/ui/components/textarea";
 import { Link } from "@tanstack/react-router";
@@ -13,6 +13,7 @@ import { Card, Eyebrow, Page, PageHeader } from "../../components/page";
 import { WeekDots } from "../../components/week-dots";
 import { TodaysReading } from "../plans/todays-reading";
 import type { ChapterData } from "../../lib/bible/source";
+import { findTranslation, pickTranslation } from "../../lib/bible/translations";
 import { useChapter } from "../../lib/bible/use-chapter";
 import { useNow } from "../../lib/state/clock";
 import { usePreferences, useT } from "../../lib/state/preferences";
@@ -47,12 +48,18 @@ export function TodayPage() {
 
   const [code, ch, vs] = VERSES_OF_THE_DAY[dayKeyToJdn(habits.today) % VERSES_OF_THE_DAY.length] ?? ["JHN", 3, 16];
   const votd = verseIdFromCode(code, ch, vs) ?? 0;
-  // The 1962 Amharic text is New Testament only; Old Testament verses come from the full ULB.
-  const amharicId = bookByCode(code)?.testament === "OT" ? "am-ulb" : "am-1962-nt";
-  const englishId =
-    TRANSLATIONS.find((x) => x.id === prefs.mainTranslation)?.language === "en" ? prefs.mainTranslation : "en-bsb";
-  const votdEn = verseIn(useChapter(englishId, chapterOf(votd)), votd);
-  const votdAm = verseIn(useChapter(amharicId, chapterOf(votd)), votd);
+  // The verse in the main translation's language first, then in the other language. Each side
+  // uses the reader's own translation when it has the verse (the 1962 is New Testament only),
+  // else that language's featured text (the 2005 for Amharic).
+  const testament = bookByCode(code)?.testament;
+  const mainMeta = findTranslation(prefs.mainTranslation);
+  const firstLang: Locale = mainMeta?.language ?? "am";
+  const secondLang: Locale = firstLang === "am" ? "en" : "am";
+  const yours = [prefs.mainTranslation, prefs.parallelTranslation];
+  const first = pickTranslation(firstLang, { testament, prefer: yours });
+  const second = pickTranslation(secondLang, { testament, prefer: yours });
+  const votdFirst = verseIn(useChapter(first?.id ?? DEFAULT_TRANSLATIONS[firstLang], chapterOf(votd)), votd);
+  const votdSecond = verseIn(useChapter(second?.id ?? DEFAULT_TRANSLATIONS[secondLang], chapterOf(votd)), votd);
 
   const last = splitVerseId(study.lastRead);
   const lastBook = bookByOrd(last.ord);
@@ -83,15 +90,23 @@ export function TodayPage() {
               <Sparkles className="mr-1.5 inline size-3.5 -translate-y-px" />
               {t.today.verseOfDay}
             </Eyebrow>
-            <blockquote lang="en" className="scripture text-[1.35em] leading-snug">
-              {votdEn?.text ?? "…"}
+            <blockquote lang={firstLang} className="scripture text-[1.35em] leading-snug">
+              {votdFirst?.text ?? "…"}
             </blockquote>
-            <blockquote lang="am" className="scripture mt-4 text-[1.05em] text-foreground/80">
-              {votdAm?.text ?? ""}
+            <blockquote lang={secondLang} className="scripture mt-4 text-[1.05em] text-foreground/80">
+              {votdSecond?.text ?? ""}
             </blockquote>
             <div className="mt-5 flex items-center justify-between">
               <span className="text-sm font-medium text-muted-foreground">
                 {formatRange({ start: votd, end: votd }, prefs.locale)}
+                {[first, second].map(
+                  (tr) =>
+                    tr && (
+                      <span key={tr.id} className="ml-2 text-xs font-semibold opacity-70">
+                        {tr.abbreviation}
+                      </span>
+                    ),
+                )}
               </span>
               <Button variant="ghost" size="sm" asChild>
                 <Link to="/read" search={{ c: chapterOf(votd), v: vs }}>
@@ -110,10 +125,7 @@ export function TodayPage() {
                 <p className="text-lg font-semibold">
                   {lastBook?.[prefs.locale].short} {last.chapter}
                 </p>
-                <p
-                  lang={TRANSLATIONS.find((x) => x.id === prefs.mainTranslation)?.language}
-                  className="scripture mt-1 line-clamp-2 text-[0.9em] text-muted-foreground"
-                >
+                <p lang={mainMeta?.language} className="scripture mt-1 line-clamp-2 text-[0.9em] text-muted-foreground">
                   {snippet}
                 </p>
               </div>

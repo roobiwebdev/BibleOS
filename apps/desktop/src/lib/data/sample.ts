@@ -3,6 +3,7 @@ import { addDays, dayKeyOf } from "@starter/bible-core/calendar";
 import { makeVerseId, verseIdFromCode, type VerseId } from "@starter/bible-core/verse-id";
 import { commands, type LocalApi } from "@starter/local-api/api";
 import type { Command } from "@starter/local-api/command";
+import { DEFAULT_TRANSLATIONS } from "@starter/local-api/schemas";
 
 /**
  * SOURCE OF TRUTH KEYWORDS: seedSample, sample study data, preview data, demo notes
@@ -121,14 +122,17 @@ export async function seedSample(api: LocalApi): Promise<void> {
   const random = seeded(7);
   const today = dayKeyOf(new Date());
   // Each sample day reads a stretch of a book, so History shows varied chapters.
+  // Mostly the Amharic 2005 (the default main text), with some English and the 1962.
+  const am = DEFAULT_TRANSLATIONS.am;
+  const en = DEFAULT_TRANSLATIONS.en;
   const stretches: Array<[string, number, number, string]> = [
-    ["JHN", 3, 3, "en-bsb"],
-    ["PSA", 23, 24, "en-bsb"],
+    ["JHN", 3, 3, am],
+    ["PSA", 23, 24, am],
     ["ROM", 8, 8, "am-1962-nt"],
-    ["GEN", 1, 2, "en-bsb"],
-    ["MRK", 4, 5, "en-bsb"],
-    ["PHP", 1, 1, "am-1962-nt"],
-    ["PSA", 91, 91, "en-bsb"],
+    ["GEN", 1, 2, am],
+    ["MRK", 4, 5, en],
+    ["PHP", 1, 1, am],
+    ["PSA", 91, 91, en],
   ];
   for (let back = 330; back >= 0; back--) {
     // Earlier months are patchier; the last ten days show a steady rhythm with one missed day.
@@ -137,7 +141,7 @@ export async function seedSample(api: LocalApi): Promise<void> {
     const minutes = back === 0 ? 9 : Math.round(4 + random() * 30);
     const endedAt = Date.now() - back * 86_400_000;
     // Day 0 ends in John 3 so "continue where you left off" matches Today.
-    const [code, from, to, translationId] = stretches[back % stretches.length] ?? ["JHN", 3, 3, "en-bsb"];
+    const [code, from, to, translationId] = stretches[back % stretches.length] ?? ["JHN", 3, 3, am];
     await run(commands.reading.recordSession, {
       startedAt: endedAt - minutes * 60_000,
       endedAt,

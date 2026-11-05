@@ -1,9 +1,11 @@
-import { TRANSLATIONS } from "@starter/bible-data/manifest";
 import { ChevronDown } from "lucide-react";
+
+import { ORDERED_TRANSLATIONS } from "../lib/bible/translations";
 
 /**
  * SOURCE OF TRUTH KEYWORDS: TranslationSelect, translation dropdown, choose translation
- * WHAT:  A native select listing every bundled translation by abbreviation and name.
+ * WHAT:  A native select listing every bundled translation by abbreviation and name, Amharic
+ *        first with the 2005 at the top (ORDERED_TRANSLATIONS).
  * WHY:   Settings and the first-run Welcome choose the main and side-by-side translations
  *        from the same list (the manifest).
  * WHERE: settings page, Welcome.
@@ -25,8 +27,8 @@ export function TranslationSelect({
         onChange={(e) => onChange(e.target.value)}
         className="h-8 max-w-64 appearance-none truncate rounded-lg border border-input bg-background pl-3 pr-8 text-[13px]"
       >
-        {TRANSLATIONS.map((t) => (
-          <option key={t.id} value={t.id}>
+        {ORDERED_TRANSLATIONS.map((t) => (
+          <option key={t.id} value={t.id} lang={t.language}>
             {t.abbreviation} · {t.name}
           </option>
         ))}
