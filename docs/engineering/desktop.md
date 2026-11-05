@@ -60,10 +60,10 @@ Keeping scripture separate means a translation can be replaced or added without 
 
 ## Translation pipeline and licensing
 
-`packages/bible-data` turns upstream USFM into the read-only databases:
+`packages/bible-data` turns upstream sources into the read-only databases:
 
-1. `src/manifest.ts` lists every bundled translation: archive URL, **pinned SHA-256**, licence, verbatim notice, scope (whole Bible or NT) and language.
-2. `src/build.ts` downloads each archive (cached in `.cache/`), verifies the hash, parses every book with `src/usfm.ts`, and writes one SQLite file per translation with `text_norm` precomputed for search. It also writes `catalog.json`.
+1. `src/manifest.ts` lists every bundled translation: archive (remote URL or private local file), **pinned SHA-256**, format, licence, verbatim notice, scope (whole Bible or NT) and language.
+2. `src/build.ts` gets each archive, verifies the hash, parses every book, and writes one SQLite file per translation with `text_norm` precomputed for search. It also writes `catalog.json`. Remote archives are cached in `.cache/` and fetched from the `bible-sources` mirror or upstream. Local archives live in `packages/bible-data/sources/` in this private repo and never go to the public mirror. USFM goes through `src/usfm.ts`. JSON chapter exports (`format: "json-chapters"`, currently the Amharic 2005) go through `src/json-chapters.ts`, which removes the cross-references the export glued into the text, joins merged verses, and fails the build if a reference is left or a chapter's last verse differs from the KJV outside its reviewed exceptions.
 3. `src/export-preview.ts` writes per-book JSON for the browser preview.
 
 `pnpm --filter desktop bibles` runs both steps into `apps/desktop/src-tauri/resources/bibles/` and `apps/desktop/public/preview-bible/`. Both folders are gitignored; the Tauri bundle copies the first into the app.
@@ -136,7 +136,7 @@ Drizzle is pinned exactly because the `sqlite-proxy` driver changed between rele
 | Layer              | How                                                                                                                                      |
 | ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------- |
 | `bible-core`       | Vitest table tests: books, references (English, Amharic, typos, ranges), normalization, Ethiopian calendar, habit math, parallel, ranges |
-| `bible-data`       | Vitest for the USFM parser; the build itself verifies hashes and verse coverage                                                          |
+| `bible-data`       | Vitest for the USFM and JSON-chapter parsers; the build itself verifies hashes and verse coverage                                        |
 | `local-api`        | Vitest on real SQLite through the `node:sqlite` executor, using the same schema and migrations as the app                                |
 | UI flows (planned) | Playwright against the Vite preview (`dev:vite`)                                                                                         |
 | The real app       | Manual checks before each release with the `evidence-driven-testing` skill; evidence goes in `.artifacts/`                               |
