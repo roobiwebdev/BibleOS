@@ -29,7 +29,7 @@ const browser = await chromium.launch();
 const SCREENS = [
   { name: "reader", hash: "#/read?c=43003000&v=16", wait: 2500 },
   { name: "study", hash: "#/study", wait: 1500 },
-  { name: "search", hash: `#/search?q=${encodeURIComponent("ፍቅር")}&t=am-ulb`, wait: 2500 },
+  { name: "search", hash: `#/search?q=${encodeURIComponent("ፍቅር")}&t=am-2005`, wait: 2500 },
   { name: "plans", hash: "#/plans", wait: 1500 },
   { name: "progress", hash: "#/progress", wait: 1500 },
 ];
@@ -39,8 +39,7 @@ for (const theme of ["Sepia", "Night"]) {
   await page.goto(`${APP}/#/settings`);
   await page.waitForTimeout(2000);
   await page.getByRole("radio", { name: new RegExp(`${theme}$`) }).click();
-  const parallel = page.locator("select").nth(1);
-  await parallel.selectOption("am-ulb");
+  // The defaults already pair the Amharic 2005 (main) with the BSB beside it.
   for (const screen of SCREENS) {
     await page.evaluate((hash) => (window.location.hash = hash), screen.hash);
     await page.waitForTimeout(screen.wait);

@@ -91,6 +91,7 @@ The "why" is in `docs/engineering/desktop.md`.
 | Desktop: UI strings (en + am)                                   | `apps/desktop/src/i18n/messages.ts`                                          |
 | Desktop: routes and URL state                                   | `apps/desktop/src/router.tsx`                                                |
 | Desktop: preferences shape                                      | `preferencesSchema` in `packages/local-api/src/schemas.ts`                   |
+| Desktop: featured translation per language, translation order   | `DEFAULT_TRANSLATIONS` (local-api schemas); desktop `translations.ts`        |
 
 ## 3. TypeScript (production grade)
 

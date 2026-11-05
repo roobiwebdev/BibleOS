@@ -1,4 +1,3 @@
-import { TRANSLATIONS } from "@starter/bible-data/manifest";
 import { Button } from "@starter/ui/components/button";
 import { Switch } from "@starter/ui/components/switch";
 import { cn } from "@starter/ui/lib/utils";
@@ -10,6 +9,7 @@ import { BuiltBy } from "../../components/built-by";
 import { Page, PageHeader } from "../../components/page";
 import { Segmented } from "../../components/segmented";
 import { TranslationSelect } from "../../components/translation-select";
+import { ORDERED_TRANSLATIONS } from "../../lib/bible/translations";
 import { useFormatDate } from "../../lib/format";
 import { ACCENTS, usePreferences, useT, type LineWidth } from "../../lib/state/preferences";
 import { appVersion, checkForUpdates, installUpdate, useUpdates, type UpdateState } from "../../lib/updates";
@@ -455,7 +455,7 @@ export function SettingsPage() {
         <UpdatesGroup />
 
         <Group title={t.settings.licences}>
-          {TRANSLATIONS.map((tr) => {
+          {ORDERED_TRANSLATIONS.map((tr) => {
             const open = openLicence === tr.id;
             return (
               <div key={tr.id}>
