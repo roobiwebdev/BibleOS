@@ -1,6 +1,7 @@
 import type { Locale } from "@starter/bible-core/books";
 
 import { historyMessages } from "./sections/history";
+import { onlineMessages } from "./sections/online";
 import { plansMessages } from "./sections/plans";
 import { searchMessages } from "./sections/search";
 import { updatesMessages } from "./sections/updates";
@@ -29,6 +30,7 @@ const en = {
   search: searchMessages.en,
   welcome: welcomeMessages.en,
   updates: updatesMessages.en,
+  online: onlineMessages.en,
   palette: {
     placeholder: "Go to a passage, e.g. John 3:16 or ዮሐ 3፥16",
     goTo: "Go to",
@@ -191,6 +193,7 @@ const am: Messages = {
   search: searchMessages.am,
   welcome: welcomeMessages.am,
   updates: updatesMessages.am,
+  online: onlineMessages.am,
   palette: {
     placeholder: "ወደ ምንባብ ይሂዱ፤ ለምሳሌ ዮሐ 3፥16 ወይም John 3:16",
     goTo: "ወደ ምንባብ ሂድ",

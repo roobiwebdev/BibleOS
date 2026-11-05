@@ -1,6 +1,7 @@
 import type { MatchMode, SearchScope } from "@starter/bible-core/search";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
+import { onlineErrorReason, type OnlineErrorReason } from "../../lib/bible/online-source";
 import { bibleSource, type SearchResponse } from "../../lib/bible/source";
 
 export interface BibleSearchState {
@@ -10,6 +11,9 @@ export interface BibleSearchState {
   ms?: number;
   loading: boolean;
   failed: boolean;
+  /** Why an online search failed (no internet, not set up, too many requests). */
+  error?: OnlineErrorReason;
+  retry: () => void;
 }
 
 /**
@@ -25,8 +29,16 @@ export function useBibleSearch(
   options: { scope: SearchScope; mode: MatchMode; limit: number },
 ): BibleSearchState {
   const { scope, mode, limit } = options;
-  const key = `${translationId}|${scope}|${mode}|${limit}|${query}`;
-  const [state, setState] = useState<{ key: string; data?: SearchResponse; ms?: number; failed: boolean }>({
+  const [attempt, setAttempt] = useState(0);
+  const retry = useCallback(() => setAttempt((n) => n + 1), []);
+  const key = `${translationId}|${scope}|${mode}|${limit}|${query}#${attempt}`;
+  const [state, setState] = useState<{
+    key: string;
+    data?: SearchResponse;
+    ms?: number;
+    failed: boolean;
+    error?: OnlineErrorReason;
+  }>({
     key: "",
     failed: false,
   });
@@ -43,13 +55,23 @@ export function useBibleSearch(
             setState({ key, data, ms: Math.round(performance.now() - started), failed: false });
           }
         },
-        () => {
-          if (!controller.signal.aborted) setState((prev) => ({ ...prev, key, failed: true }));
+        (error: unknown) => {
+          if (!controller.signal.aborted) {
+            setState((prev) => ({ ...prev, key, failed: true, error: onlineErrorReason(error) }));
+          }
         },
       );
     return () => controller.abort();
   }, [translationId, query, scope, mode, limit, key]);
 
-  if (!query.trim()) return { loading: false, failed: false };
-  return { data: state.data, ms: state.ms, loading: state.key !== key, failed: state.key === key && state.failed };
+  if (!query.trim()) return { loading: false, failed: false, retry };
+  const failed = state.key === key && state.failed;
+  return {
+    data: state.data,
+    ms: state.ms,
+    loading: state.key !== key,
+    failed,
+    error: failed ? state.error : undefined,
+    retry,
+  };
 }

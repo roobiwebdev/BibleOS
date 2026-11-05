@@ -1,15 +1,16 @@
-import { TRANSLATIONS } from "@starter/bible-data/manifest";
 import { Button } from "@starter/ui/components/button";
 import { Switch } from "@starter/ui/components/switch";
 import { cn } from "@starter/ui/lib/utils";
 import { isTauri } from "@tauri-apps/api/core";
-import { Check, ChevronDown, Download, FileText, Minus, Plus, RefreshCw, Upload } from "lucide-react";
+import { Check, ChevronDown, Download, FileText, Globe, Minus, Plus, RefreshCw, Upload } from "lucide-react";
 import { useEffect, useId, useState, type ReactNode } from "react";
 
 import { BuiltBy } from "../../components/built-by";
+import { OnlineAttribution } from "../../components/online-text";
 import { Page, PageHeader } from "../../components/page";
 import { Segmented } from "../../components/segmented";
 import { TranslationSelect } from "../../components/translation-select";
+import { isOnline, READER_TRANSLATIONS } from "../../lib/bible/catalog";
 import { useFormatDate } from "../../lib/format";
 import { ACCENTS, usePreferences, useT, type LineWidth } from "../../lib/state/preferences";
 import { appVersion, checkForUpdates, installUpdate, useUpdates, type UpdateState } from "../../lib/updates";
@@ -455,7 +456,7 @@ export function SettingsPage() {
         <UpdatesGroup />
 
         <Group title={t.settings.licences}>
-          {TRANSLATIONS.map((tr) => {
+          {READER_TRANSLATIONS.map((tr) => {
             const open = openLicence === tr.id;
             return (
               <div key={tr.id}>
@@ -470,6 +471,7 @@ export function SettingsPage() {
                   <span lang={tr.language} className="flex-1 truncate text-sm">
                     {tr.name}
                   </span>
+                  {isOnline(tr) && <Globe aria-label={t.online.online} className="size-3.5 text-muted-foreground" />}
                   <span className="text-xs text-muted-foreground">{tr.licence.name}</span>
                   <ChevronDown
                     aria-hidden
@@ -477,12 +479,20 @@ export function SettingsPage() {
                   />
                 </button>
                 {open && (
-                  <p
+                  <div
                     id={`licence-${tr.id}`}
-                    className="whitespace-pre-line border-t bg-background/60 px-5 py-4 text-xs leading-relaxed text-muted-foreground"
+                    className="border-t bg-background/60 px-5 py-4 text-xs leading-relaxed text-muted-foreground"
                   >
-                    {tr.notice}
-                  </p>
+                    <p lang={tr.language} className="whitespace-pre-line">
+                      {tr.notice}
+                    </p>
+                    {isOnline(tr) && (
+                      <>
+                        <p className="mt-3">{t.online.licenceOnline}</p>
+                        <OnlineAttribution translation={tr} className="mt-2" />
+                      </>
+                    )}
+                  </div>
                 )}
               </div>
             );

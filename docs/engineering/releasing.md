@@ -82,14 +82,46 @@ The deploy key can be replaced at any time: generate a new one with `ssh-keygen 
 
 Edit `release-repo/` here, merge, then copy the files into a clone of `roobiwebdev/BibleOS-releases` and push.
 
-## Deploying the landing page
+## Deploying the landing page and the Bible relay
+
+The Vercel project `bibleos-site` (team `roobis-projects`, domain bible.roobi.dev) serves two things from one prebuilt deployment ([Build Output API v3](https://vercel.com/docs/build-output-api/v3)):
+
+- the static landing page, byte for byte what `pnpm --filter site build` writes to `apps/site/dist/` (`/`, `/install.sh`, `/install.ps1`, `/og.png`, `/favicon.png`, `/robots.txt`, `/screenshots/*`, `/assets/*`), and
+- the Bible API relay for the online ESV and NLT at `/api/bible` (a Node function; see [desktop.md](desktop.md#online-translations-esv-and-nlt)).
+
+`pnpm --filter site build:vercel` builds the site, bundles the relay with `vite.relay.config.ts`, and `scripts/build-vercel.mjs` assembles `apps/site/.vercel/output/` (`static/` copied from `dist/`, `functions/api/bible.func/`, `config.json`). Vercel runs no build of its own.
+
+Once per checkout, link `apps/site` (not `apps/site/dist`) to the existing project:
 
 ```bash
-pnpm --filter site build
-cd apps/site/dist && vercel deploy --prod --scope roobis-projects
+cd apps/site && vercel link --yes --project bibleos-site --scope roobis-projects
 ```
 
-The first deploy from a fresh checkout asks to link a project: choose the existing `bibleos-site`. The page reads the latest release from the GitHub API when it loads, so it only needs a redeploy when the site itself changes.
+Then, from the repo root, each deploy is:
+
+```bash
+pnpm --filter site build:vercel
+cd apps/site && vercel deploy --prebuilt --prod --scope roobis-projects
+```
+
+Before the first deploy of the relay, add the API keys as production environment variables (values are prompted for, never typed into the shell history or the repo), then deploy:
+
+```bash
+cd apps/site
+vercel env add ESV_API_KEY production --scope roobis-projects
+vercel env add NLT_API_KEY production --scope roobis-projects
+```
+
+Keys come from https://api.esv.org/ (create an account, then an API application; non-commercial) and https://api.nlt.to/ (request a key; non-commercial). Changing a key needs a redeploy. Without a key the relay answers `503 not-configured` and the app shows "not available yet" for that translation; everything else keeps working.
+
+Check after deploying:
+
+```bash
+curl -sI https://bible.roobi.dev/ https://bible.roobi.dev/install.sh https://bible.roobi.dev/og.png | grep -E "^HTTP"
+curl -s "https://bible.roobi.dev/api/bible?t=en-esv&kind=verses&book=JHN&chapter=11&from=35&to=35"
+```
+
+The old flow (`cd apps/site/dist && vercel deploy --prod`) uploaded `dist/` as plain files and cannot carry the function, so do not use it any more; the old link in `apps/site/dist/.vercel` can be deleted. The page reads the latest release from the GitHub API when it loads, so it only needs a redeploy when the site or the relay changes.
 
 ## Building locally
 

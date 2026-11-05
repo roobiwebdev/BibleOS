@@ -11,7 +11,15 @@ import { chapterOf, type VerseId } from "@starter/bible-core/verse-id";
 import { invoke } from "@tauri-apps/api/core";
 import { z } from "zod";
 
-import type { BibleSource, ChapterData, ChapterVerse, SearchOptions, SearchResponse, SearchVerse } from "./source";
+import {
+  passageFromChapter,
+  type BibleSource,
+  type ChapterData,
+  type ChapterVerse,
+  type SearchOptions,
+  type SearchResponse,
+  type SearchVerse,
+} from "./source";
 
 /**
  * SOURCE OF TRUTH KEYWORDS: translationStore, getChapter, verseContaining, searchTranslation, bundled translation, bible_all
@@ -128,6 +136,7 @@ export async function searchTranslation(id: string, input: string, options: Sear
 
 export const translationStore: BibleSource = {
   getChapter,
+  getPassage: (id, range) => passageFromChapter(getChapter, id, range),
   // Every chapter is bundled in the app.
   availableChapters: async () => undefined,
   search: searchTranslation,

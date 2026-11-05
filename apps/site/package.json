@@ -6,8 +6,11 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build && vite build --ssr src/entry-server.tsx --outDir .ssr && node scripts/prerender.mjs",
+    "build:vercel": "pnpm run build && vite build --config vite.relay.config.ts && node scripts/build-vercel.mjs",
     "preview": "vite preview",
     "check-types": "tsc --noEmit",
+    "test": "vitest run",
+    "relay:dev": "vite build --config vite.relay.config.ts && node scripts/relay-dev.mjs",
     "capture": "node scripts/capture.mjs"
   },
   "dependencies": {
@@ -26,12 +29,14 @@
     "@playwright/test": "^1.56.0",
     "@starter/config": "workspace:*",
     "@tailwindcss/vite": "^4.3.3",
+    "@types/node": "catalog:",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
     "@vitejs/plugin-react": "^6.1.2",
     "tailwindcss": "catalog:",
     "typescript": "catalog:",
-    "vite": "^8.3.5"
+    "vite": "^8.3.5",
+    "vitest": "catalog:"
   },
   "nx": {
     "targets": {

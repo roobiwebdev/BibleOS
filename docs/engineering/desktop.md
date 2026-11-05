@@ -4,7 +4,7 @@ BibleOS is a desktop Bible study app for macOS, Windows and Linux in `apps/deskt
 
 ## Local-first
 
-Everything a reader creates (highlights, notes, collections, reading time) stays on their Mac. There is no account, no server and no telemetry in v1.
+Everything a reader creates (highlights, notes, collections, reading time) stays on their Mac. There is no account, no server and no telemetry in v1. The one network feature is optional: the ESV and NLT are read online (see [Online translations](#online-translations-esv-and-nlt)), and only when the reader picks one.
 
 - **Privacy.** Study notes and prayer journals are personal. Keeping them on disk in the user's macOS account means there is nothing to breach and nothing to sign in to.
 - **Offline.** Scripture and study data are both local, so the app works on a plane or in a church with no signal.
@@ -28,7 +28,7 @@ The SPA uses TanStack Router with **hash history** (`src/router.tsx`). Hash URLs
 
 ### No `.env`
 
-A desktop app has no deployment environment to read from. Build-time config (window, CSP, bundle id, resources) lives in `src-tauri/tauri.conf.json`. OS permissions live in `src-tauri/capabilities/`. Anything the user can change belongs in Settings, validated by `preferencesSchema` in `local-api`. v1 has no secrets. When online translation providers arrive, their keys go in the macOS Keychain.
+A desktop app has no deployment environment to read from. Build-time config (window, CSP, bundle id, resources) lives in `src-tauri/tauri.conf.json`. OS permissions live in `src-tauri/capabilities/`. Anything the user can change belongs in Settings, validated by `preferencesSchema` in `local-api`. The app holds no secrets. The online translations' API keys live only on the relay (see [Online translations](#online-translations-esv-and-nlt)), so there is nothing to put in the Keychain.
 
 ## Data model
 
@@ -76,6 +76,30 @@ Why the discipline:
 - **Book names can come from our catalogue.** When an edition's own book titles carry errors, the manifest sets `bookNames: "catalogue"` and the reviewed names in `bible-core/src/books.ts` are used.
 
 Screens read scripture only through `BibleSource` (`apps/desktop/src/lib/bible/source.ts`). Inside Tauri it loads the SQLite translation store; in a browser it loads the preview JSON and validates each file with Zod. Screens do not know which one they got, so the UI can be designed and tested in a browser and the native store changes no screen code.
+
+## Online translations (ESV and NLT)
+
+The ESV (Crossway) and NLT (Tyndale) may not be bundled. Their publishers let free, non-commercial apps fetch the text from their APIs, with limits. BibleOS reads them online, and every other screen treats them like bundled text.
+
+```
+reader / Today / study / search
+  → BibleSource (src/lib/bible/source.ts): online ids go to the online source
+  → online source (src/lib/bible/online-source.ts): one chapter, a verse range or a search; cache ≤ 500 verses
+  → https://bible.roobi.dev/api/bible  (the relay, a Vercel function next to the landing page)
+  → api.esv.org / api.nlt.to with the key from the relay's environment
+```
+
+- **One source of truth.** `packages/bible-data/src/online.ts` holds `ONLINE_TRANSLATIONS` (names, publisher, verbatim notices with their source URL, the required link), `ONLINE_LIMITS`, `ONLINE_RELAY` and the Zod schemas for relay requests and responses. The app builds requests with the same schema the relay checks, and checks every response. `apps/desktop/src/lib/bible/catalog.ts` joins the bundled and online lists for the menus (`READER_TRANSLATIONS`, `delivery: "bundled" | "online"`).
+- **Keys never ship.** `ESV_API_KEY` and `NLT_API_KEY` are Vercel environment variables on the relay. `apps/site/relay/vercel.ts` is the only file that reads them. The NLT key travels in the publisher URL, so the relay never logs URLs or bodies.
+- **The relay stores nothing.** Each request is checked with Zod (one chapter, a verse range inside one chapter, or a search of 2 to 100 characters), passed to the publisher, normalised into one JSON shape (verses by `VerseId` with paragraph style, headings, search hits) and returned with `Cache-Control: no-store`. Without a key it answers `503 not-configured`. Rate limits are best effort and per instance: 30 requests a minute per IP, plus each publisher's caps (ESV 60 a minute, 1,000 an hour, 5,000 a day; NLT 5,000 a day). CORS allows only `tauri://localhost` (macOS, Linux), `http://tauri.localhost` (Windows) and `http://localhost:1420` (browser preview); other browser origins get 403.
+- **Licence limits in the app.** The ESV terms (https://api.esv.org/) allow at most 500 verses or half a book per query, stored locally and shown on one page. The NLT key tier (https://api.nlt.to/) allows 500 verses a request and 5,000 requests a day and says nothing about caching, so the app applies the ESV rule to both. The online source keeps at most 500 verses per translation in memory (least recently used out first, nothing on disk). The continuous reader keeps each online translation within 500 verses and half a book on screen, and says so when it stops loading more chapters.
+- **Attribution.** Every chapter, passage and search result in an online translation shows the abbreviation, the publisher and the publisher's link (`OnlineAttribution`); the ESV terms ask for a link to www.esv.org on every page. Settings → Translations and licences shows each verbatim notice. The links are allowed in `src-tauri/capabilities/default.json`.
+- **No internet is a normal state.** Online calls reject with `OnlineTextError` (`offline`, `not-configured`, `rate-limited`, `failed`) and never hang (15 s timeout). Screens show `OnlineUnavailable` with a retry, in English and Amharic; in parallel view the side that loaded is read alone. Bundled translations keep working.
+- **Omitted verses.** The ESV and NLT move some verses to footnotes (Matthew 17:21). The relay leaves them out, the reader skips the number (the parallel column shows "—"), and study lists say the translation has no text for that verse. Notes, highlights and bookmarks stay keyed by `VerseId`, so they carry over between translations.
+- **CSP.** `connect-src` in `tauri.conf.json` allows exactly `https://bible.roobi.dev`, the origin in `ONLINE_RELAY`.
+- **Defaults are unchanged.** New installs still open the bundled BSB and 1962; the ESV and NLT appear only when picked.
+
+Testing: `apps/site/relay/relay.test.ts` runs the parsers against recorded publisher answers in `apps/site/relay/fixtures/` (the ESV documentation examples and a synthetic Matthew 17; NLT pages), and `apps/desktop/src/lib/bible/online-source.test.ts` covers the cache cap, errors and search. `pnpm --filter site relay:dev` runs the bundled relay on http://localhost:4320/api/bible with the keys from your shell, or with `RELAY_FIXTURES=1` from the fixtures.
 
 ## Amharic and Ethiopic text
 

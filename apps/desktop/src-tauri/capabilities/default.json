@@ -1,7 +1,7 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "Main window: core APIs only. SQLite goes through the app's own db bridge (study database and bundled translations), never arbitrary paths. Window: drag by the top strips (data-tauri-drag-region). Updates: check, download and install signed releases, then relaunch. Links: only the author's site (roobi.dev) opens in the system browser.",
+  "description": "Main window: core APIs only. SQLite goes through the app's own db bridge (study database and bundled translations), never arbitrary paths. Window: drag by the top strips (data-tauri-drag-region). Updates: check, download and install signed releases, then relaunch. Links: only the author's site (roobi.dev) and the online translations' publisher sites (esv.org, newlivingtranslation.com, which their terms ask the app to link to) open in the system browser.",
   "windows": ["main"],
   "permissions": [
     "core:default",
@@ -13,6 +13,12 @@
       "allow": [
         {
           "url": "https://roobi.dev/*"
+        },
+        {
+          "url": "https://www.esv.org/*"
+        },
+        {
+          "url": "https://www.newlivingtranslation.com/*"
         }
       ]
     }

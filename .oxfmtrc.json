@@ -9,6 +9,7 @@
     "apps/docs/.source/**",
     ".reference/**",
     ".agents/skills/**",
-    ".claude/settings.local.json"
+    ".claude/settings.local.json",
+    "apps/site/relay/fixtures/**"
   ]
 }

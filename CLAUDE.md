@@ -30,6 +30,7 @@ packages/ui         shadcn/ui primitives + theme tokens (globals.css)
 
 apps/desktop        BibleOS: Tauri 2 shell (src-tauri) + Vite React SPA (src)
 apps/site           Public landing page: static Vite + React, prerendered; downloads from GitHub releases
+                    + relay/: the Bible API relay for the online ESV and NLT (a Vercel function at /api/bible)
 packages/bible-core Pure TS: books, verse ids, reference parser, normalize, calendar, habits, parallel, range
 packages/bible-data Build pipeline: pinned downloads → USFM parser → one read-only SQLite per translation
 packages/local-db   Drizzle SQLite schema + migrations + SQLite executor interface and adapters
@@ -38,7 +39,7 @@ packages/local-api  defineCommand checkpoint, commands and services for study da
 
 Request flow: **UI → server action or tRPC hook → router (business logic) → service / ctx.db (data) → Postgres.**
 
-- **Env is read in exactly one place:** `apps/web/src/server/services.ts` (via `server/env.ts`). Packages receive config and clients as arguments. Never read `process.env` in a package. (Existing exceptions, do not add more: `NODE_ENV` checks in `packages/core/src/logger.ts` and the tRPC error formatter, and the database CLI tooling in `packages/db/drizzle.config.ts` and `src/reset.ts`.)
+- **Env is read in exactly one place:** `apps/web/src/server/services.ts` (via `server/env.ts`). Packages receive config and clients as arguments. Never read `process.env` in a package. (Existing exceptions, do not add more: `NODE_ENV` checks in `packages/core/src/logger.ts` and the tRPC error formatter, and the database CLI tooling in `packages/db/drizzle.config.ts` and `src/reset.ts`.) The Bible relay is its own deployment: it reads its two keys (`ESV_API_KEY`, `NLT_API_KEY`) only in `apps/site/relay/vercel.ts`.
 - **Every data operation goes through a tRPC procedure** from `packages/api/src/trpc.ts`:
   - `publicProcedure()` for anonymous reads and public forms (rate limited by IP, or by user ID when signed in; mutations are audited only if you pass `audit`)
   - `protectedProcedure({ role?, permission?, rateLimit?, audit? })` for signed-in users
@@ -61,7 +62,7 @@ Request flow: **UI → TanStack Query hook (or state hook) → local-api command
 - **`defineCommand` replaces tRPC procedures for local data** and is the desktop security checkpoint. There is one local user, so auth, roles, permissions, plans and rate limits do not apply. What does apply: Zod input validation, size limits (note length, tag counts, import size), a transaction for every mutation, and a `change_log` row for every mutation. Never re-implement these in a command.
 - **The UI never imports the SQLite executor or drivers.** Only `apps/desktop/src/lib/data/*` and `local-api` touch them. In the app, SQLite is reached only through the Rust bridge in `src-tauri/src/db.rs` (`study_run`/`study_all` on one connection to `study.sqlite`, `bible_all` read-only by translation id). No SQL plugin, and the web layer never names a file path.
 - **No `.env`.** App config lives in `src-tauri/tauri.conf.json` (window, CSP, bundle) and `src-tauri/capabilities/`; user config lives in Settings (the local-api settings schema). Keep Rust to plugin wiring: no business logic in `src-tauri`.
-- **Bible text comes only through `BibleSource`** (`src/lib/bible/source.ts`). It picks the bundled SQLite store inside Tauri or the per-book preview JSON in a browser. Screens never read translation files directly.
+- **Bible text comes only through `BibleSource`** (`src/lib/bible/source.ts`). It picks the bundled SQLite store inside Tauri or the per-book preview JSON in a browser, and sends online translations (ESV, NLT) to the online source, which calls the relay in `apps/site/relay`. Screens never read translation files directly. API keys live only in the relay's Vercel environment, never in the app.
 - **Scripture is never edited by hand.** Change it only through `packages/bible-data` with a pinned SHA-256. Licences and notices come from `packages/bible-data/src/manifest.ts` and are shown verbatim.
 - **Study data is keyed by canonical `VerseId`**, never by translation.
 - **Ethiopic/Amharic:** set `lang="am"` (or `en`) on every element that shows scripture or UI text in that language. Never fold or "fix" displayed scripture. Search folding happens only through `normalizeForSearch` from `bible-core`.
@@ -87,6 +88,7 @@ The "why" is in `docs/engineering/desktop.md`.
 | API input/output types for clients                              | `RouterInputs` / `RouterOutputs` from `@starter/api`                         |
 | Desktop: verse ids, books, references, calendar, habits, ranges | `packages/bible-core/src/*`                                                  |
 | Desktop: bundled translations, licences, notices                | `packages/bible-data/src/manifest.ts`                                        |
+| Desktop: online translations (ESV, NLT), limits, relay schemas  | `packages/bible-data/src/online.ts`                                          |
 | Desktop: themes, accents, reading tokens                        | `apps/desktop/src/styles.css`                                                |
 | Desktop: UI strings (en + am)                                   | `apps/desktop/src/i18n/messages.ts`                                          |
 | Desktop: routes and URL state                                   | `apps/desktop/src/router.tsx`                                                |
@@ -173,7 +175,9 @@ pnpm --filter desktop release:version <x.y.z>   set the app version before a rel
 pnpm --filter @starter/bible-data build:bibles   translation DBs only
 
 pnpm --filter site dev              landing page on http://localhost:4310
-pnpm --filter site build            static site in apps/site/dist (deployed to Vercel: bible.roobi.dev)
+pnpm --filter site build            static site in apps/site/dist
+pnpm --filter site build:vercel     site + Bible API relay as a prebuilt Vercel deployment (bible.roobi.dev; see releasing.md)
+pnpm --filter site relay:dev        relay on http://localhost:4320/api/bible (RELAY_FIXTURES=1 for recorded answers)
 pnpm --filter site capture          re-capture screenshots, demo poster and og.png (needs both dev servers)
 ```
 

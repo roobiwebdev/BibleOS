@@ -11,6 +11,7 @@
     "bibles": "pnpm --filter @starter/bible-data build:bibles --out ../../apps/desktop/src-tauri/resources/bibles && pnpm --filter @starter/bible-data export:preview --from ../../apps/desktop/src-tauri/resources/bibles --out ../../apps/desktop/public/preview-bible",
     "tauri": "tauri",
     "check-types": "tsc --noEmit",
+    "test": "vitest run",
     "release:version": "node scripts/set-version.mjs"
   },
   "dependencies": {
@@ -46,6 +47,7 @@
     "@vitejs/plugin-react": "^6.1.2",
     "tailwindcss": "catalog:",
     "typescript": "catalog:",
-    "vite": "^8.3.5"
+    "vite": "^8.3.5",
+    "vitest": "catalog:"
   }
 }
