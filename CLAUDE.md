@@ -182,7 +182,7 @@ pnpm --filter site relay:dev        relay on http://localhost:4320/api/bible (RE
 pnpm --filter site capture          re-capture screenshots, demo poster and og.png (needs both dev servers)
 ```
 
-Run `pnpm --filter desktop bibles` once before the first desktop run; its output is gitignored. Desktop builds are unsigned: on first open, allow the app once in System Settings → Privacy & Security → Open Anyway (Windows: SmartScreen → More info → Run anyway). Releases and the landing page are built and hosted by the public repo `roobiwebdev/BibleOS-releases` (its workflows live in `release-repo/` here; see `docs/engineering/releasing.md`). This repo stays private; never commit the updater signing key or deploy key.
+Run `pnpm --filter desktop bibles` once before the first desktop run; its output is gitignored. Desktop builds are unsigned: on first open, allow the app once in System Settings → Privacy & Security → Open Anyway (Windows: SmartScreen → More info → Run anyway). Releases and the landing page are built and hosted by the public repo `roobiwebdev/BibleOS-releases` (its workflows live in `release-repo/` here; see `docs/engineering/releasing.md`). This repo is public (open source); never commit the updater signing key, deploy key or API keys.
 
 To study how a feature works in an existing app or binary before building our own version, use the `reverse-engineer-anything` skill with the `rea` MCP server. Rebuild the behavior in this codebase following the rules above; never copy third-party code.
 

@@ -1,7 +1,7 @@
 import { TRANSLATIONS } from "@starter/bible-data/manifest";
 
 import { AppIcon } from "../components/logo";
-import { AUTHOR, REPO } from "../config";
+import { AUTHOR, REPO, SOURCE_REPO } from "../config";
 import { COPY } from "../copy";
 
 /**
@@ -45,7 +45,7 @@ export function SiteFooter() {
               </a>
             </li>
             <li>
-              <a href={REPO.url} className="hover:underline">
+              <a href={SOURCE_REPO.url} className="hover:underline">
                 {f.github}
               </a>
             </li>

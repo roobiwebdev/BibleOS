@@ -1,15 +1,22 @@
 /**
- * SOURCE OF TRUTH KEYWORDS: SITE, REPO, releases URL, download assets, PLATFORMS, asset patterns, GitHub
- * WHAT:  Where BibleOS lives on the web (the public releases repository, release page, release API,
- *        site URL) and how each platform's installer is recognised among a release's files.
+ * SOURCE OF TRUTH KEYWORDS: SITE, REPO, SOURCE_REPO, releases URL, source code, star on GitHub, download assets, PLATFORMS
+ * WHAT:  Where BibleOS lives on the web (the open source repository, the releases repository with
+ *        its release page and API, the site URL) and how each platform's installer is recognised
+ *        among a release's files.
  * WHY:   The release workflow (tauri-action) names files by a fixed pattern. Keeping the owner,
  *        repo and patterns here means a rename touches one file, and every link falls back to the
  *        same release page when the API has nothing to offer.
- * WHERE: lib/releases.ts, sections (hero, download, install, footer), index.html meta (by hand).
+ * WHERE: lib/releases.ts, sections (nav, hero, download, install, footer), index.html meta (by hand).
  */
 const OWNER = "roobiwebdev";
-// The public repo that holds installers, the update feed and this site. The source stays private.
+// The repo that holds installers and the update feed. Installed apps and the install scripts
+// read it, so downloads stay here; "GitHub" links go to the source (SOURCE_REPO).
 const NAME = "BibleOS-releases";
+
+/** The open source code: where the GitHub links (and stars) go. */
+export const SOURCE_REPO = {
+  url: `https://github.com/${OWNER}/BibleOS`,
+} as const;
 
 export const REPO = {
   owner: OWNER,
