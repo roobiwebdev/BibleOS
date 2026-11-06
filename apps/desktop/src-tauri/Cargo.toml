@@ -1,6 +1,6 @@
 [package]
 name = "bibleos"
-version = "0.2.0"
+version = "0.3.0"
 description = "BibleOS: a calm, local-first Bible study app"
 edition = "2021"
 rust-version = "1.80"
