@@ -143,19 +143,23 @@ export function ChapterText({
  * WHAT:  Two translations, one aligned row per verse span. Side by side when there is room,
  *        stacked pairs when the window is narrow.
  * WHY:   Merged and split verses stay next to their counterparts; headings that fall inside a
- *        merged span still appear before that row.
+ *        merged span still appear before that row. A text without headings (the Amharic 2005)
+ *        simply has none here: rows follow each other with no gaps.
  * WHERE: reader parallel view.
  */
 export function ParallelText({
   rows,
   langs,
   headings,
+  headingsLang,
   decor,
   emptyLabel,
 }: {
   rows: ParallelRow<ChapterVerse>[];
   langs: [string, string];
   headings: ChapterHeading[];
+  /** The language of the translation the headings come from. */
+  headingsLang: string;
   decor: VerseDecor;
   emptyLabel: ReactNode;
 }) {
@@ -166,7 +170,7 @@ export function ParallelText({
         return (
           <Fragment key={row.start}>
             {before.length > 0 && (
-              <div className="@3xl:col-span-2">
+              <div lang={headingsLang} className="@3xl:col-span-2">
                 {before.map((h, i) => (
                   <Heading key={i} heading={h} />
                 ))}

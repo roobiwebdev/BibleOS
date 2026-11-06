@@ -115,7 +115,7 @@ export const COPY = {
     title: "Made for Amharic readers.",
     body: "Read an Amharic translation beside an English one, verse by verse. Switch the whole app to Amharic, and show dates in the Ethiopian calendar.",
     points: [
-      "Two Amharic texts: the Amharic Unlocked Literal Bible and the 1962 New Testament",
+      "Three Amharic texts: the 2005 Amharic Bible (አዲሱ መደበኛ ትርጉም), which opens by default, the Amharic Unlocked Literal Bible and the 1962 New Testament",
       "The interface in Amharic or English, chosen separately from the Bible translation",
       "Ethiopian calendar dates on Today, in your history and on the progress heatmap",
       "Type references the Amharic way: ዮሐ 3፥16 works as well as John 3:16",
@@ -236,7 +236,7 @@ export const COPY = {
       },
       {
         q: "Which Bibles are included?",
-        a: "Two Amharic texts (the Amharic Unlocked Literal Bible and the 1962 New Testament) and three English ones (King James Version, World English Bible and Berean Standard Bible). They are bundled with the app, so no download is needed after installing. Their licences are listed at the bottom of this page.",
+        a: "Three Amharic texts (the 2005 Amharic Bible, the Amharic Unlocked Literal Bible and the 1962 New Testament) and three English ones (King James Version, World English Bible and Berean Standard Bible). The app opens with the 2005 Amharic Bible and the Berean Standard Bible beside it; you can change both. They are bundled with the app, so no download is needed after installing. Their licences are listed at the bottom of this page.",
       },
       {
         q: "Does it need the internet?",

@@ -1,10 +1,12 @@
+import { bookByOrd } from "@starter/bible-core/books";
 import type { VerseRange } from "@starter/bible-core/range";
-import type { VerseId } from "@starter/bible-core/verse-id";
-import { TRANSLATIONS, type TranslationSource } from "@starter/bible-data/manifest";
+import { splitVerseId, type VerseId } from "@starter/bible-core/verse-id";
+import type { TranslationSource } from "@starter/bible-data/manifest";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import { onlineErrorReason, type OnlineErrorReason } from "./online-source";
 import { bibleSource, type BibleSource, type ChapterData, type ChapterVerse } from "./source";
+import { findTranslation, pickTranslation } from "./translations";
 
 /**
  * SOURCE OF TRUTH KEYWORDS: TextLoad, useTextLoad, load state, retry, needs internet
@@ -90,8 +92,8 @@ export function useAvailableChapters(): readonly VerseId[] | undefined {
 /**
  * SOURCE OF TRUTH KEYWORDS: loadChapterWithFallback, ShownChapter, NT-only fallback, translation fallback, missing book
  * WHAT:  Loads one chapter of a translation; when that translation lacks the book (the 1962
- *        Amharic text is New Testament only), loads a whole-Bible translation in the same
- *        language instead and says which one was replaced.
+ *        Amharic text is New Testament only), loads another translation in the same language that
+ *        has the book (the featured one first, so the 2005 for Amharic) and says which one was replaced.
  * WHY:   The reader keeps flowing through the Old Testament in the reader's language instead of
  *        showing an empty page, and each chapter carries its own notice.
  * WHERE: reader chapter window (continuous scrolling).
@@ -114,10 +116,9 @@ export async function loadChapterWithFallback(translationId: string, chapterId: 
     // Online text without a connection: an empty chapter that says why, never a crash.
     return { data: { verses: [], headings: [] }, id: translationId, error: onlineErrorReason(error) };
   }
-  const meta = TRANSLATIONS.find((x) => x.id === translationId);
-  const fallback = TRANSLATIONS.find(
-    (x) => x.language === meta?.language && x.scope === "bible" && x.id !== translationId,
-  );
+  const meta = findTranslation(translationId);
+  const testament = bookByOrd(splitVerseId(chapterId).ord)?.testament;
+  const fallback = meta && pickTranslation(meta.language, { testament, exclude: translationId });
   if (own.verses.length > 0 || !fallback) return { data: own, id: translationId };
   return {
     data: await source.getChapter(fallback.id, chapterId),

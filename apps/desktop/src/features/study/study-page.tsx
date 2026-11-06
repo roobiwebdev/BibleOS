@@ -1,3 +1,4 @@
+import { bookByOrd } from "@starter/bible-core/books";
 import { normalizeForSearch } from "@starter/bible-core/normalize";
 import { formatRange, overlaps, type VerseRange } from "@starter/bible-core/range";
 import { referenceRange } from "@starter/bible-core/reference";
@@ -19,6 +20,7 @@ import { NoteEditor } from "../../components/note-editor";
 import { OnlineAttribution, OnlineUnavailable } from "../../components/online-text";
 import { Page, PageHeader } from "../../components/page";
 import { findReaderTranslation, isOnline } from "../../lib/bible/catalog";
+import { covers, findTranslation, pickTranslation } from "../../lib/bible/translations";
 import { usePassage } from "../../lib/bible/use-chapter";
 import { useFormatDate } from "../../lib/format";
 import { usePreferences, useT } from "../../lib/state/preferences";
@@ -27,16 +29,23 @@ import { studyRoute } from "../../router";
 
 /**
  * SOURCE OF TRUTH KEYWORDS: PassageText, passage text, verse text for a range
- * WHAT:  The text of a verse range in the reader's main translation, with its language set.
- *        Online translations show their attribution, or "needs internet" with a retry.
+ * WHAT:  The text of a verse range in the reader's main translation (or, for a book it lacks,
+ *        the featured text in its language), with its language set. Online translations show
+ *        their attribution, or "needs internet" with a retry.
  * WHY:   Study lists show the words themselves, not just references.
  * WHERE: Study notes, highlights, collections and bookmarks.
  */
 function PassageText({ range, className }: { range: VerseRange; className?: string }) {
   const t = useT();
   const { prefs } = usePreferences();
-  const passage = usePassage(prefs.mainTranslation, range);
-  const meta = findReaderTranslation(prefs.mainTranslation);
+  // A New Testament only main text shows Old Testament passages from its language's featured text.
+  const testament = bookByOrd(splitVerseId(range.start).ord)?.testament;
+  const main = findTranslation(prefs.mainTranslation);
+  const meta =
+    main && !covers(main, testament)
+      ? (findReaderTranslation(pickTranslation(main.language, { testament })?.id) ?? findReaderTranslation(main.id))
+      : findReaderTranslation(prefs.mainTranslation);
+  const passage = usePassage(meta?.id ?? prefs.mainTranslation, range);
   const lang = meta?.language ?? "en";
   const text = passage.data
     ?.filter((v) => overlaps(range, { start: v.vid, end: v.spanEnd }))

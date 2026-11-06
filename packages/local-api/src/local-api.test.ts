@@ -49,6 +49,12 @@ beforeEach(async () => {
 
 const changeLog = () => executor.all("SELECT entity, entity_id, action FROM change_log ORDER BY at, id");
 
+/** Stores a preferences row as an older app saved it, before defaultsVersion existed (version 0). */
+const storeOld = (value: Record<string, unknown>) =>
+  executor.run("INSERT INTO settings (key, value, created_at, updated_at) VALUES ('app', ?, 1, 1)", [
+    JSON.stringify(value),
+  ]);
+
 describe("defineCommand", () => {
   it("rejects invalid input with typed issues and writes nothing", async () => {
     const result = await run(commands.highlights.set, { range: { start: 5, end: 1 }, color: "promise" });
@@ -312,6 +318,64 @@ describe("settings", () => {
     const prefs = ok(await run(commands.settings.get, {}));
     expect(prefs.accent).toBe("teal");
     expect(prefs.textSize).toBe(DEFAULT_PREFERENCES.textSize);
+  });
+
+  it("gives new readers the Amharic 2005 with the BSB beside it", async () => {
+    const prefs = ok(await run(commands.settings.get, {}));
+    expect(prefs).toMatchObject({ mainTranslation: "am-2005", parallelTranslation: "en-bsb", defaultsVersion: 1 });
+  });
+
+  it("switches an existing reader's main text to the 2005 once, keeping their old main beside it", async () => {
+    await storeOld({ mainTranslation: "en-bsb", parallelTranslation: "am-1962-nt", accent: "plum", textSize: 22 });
+    const migrated = ok(await run(commands.settings.get, {}));
+    expect(migrated).toMatchObject({
+      mainTranslation: "am-2005",
+      parallelTranslation: "en-bsb",
+      accent: "plum",
+      textSize: 22,
+      defaultsVersion: 1,
+    });
+
+    // Any later choice is saved with the current version and sticks.
+    ok(await run(commands.settings.set, { mainTranslation: "en-kjv", parallelTranslation: "am-ulb" }));
+    expect(ok(await run(commands.settings.get, {}))).toMatchObject({
+      mainTranslation: "en-kjv",
+      parallelTranslation: "am-ulb",
+      defaultsVersion: 1,
+    });
+    // An unrelated change does not re-run the switch either.
+    ok(await run(commands.settings.set, { accent: "teal" }));
+    expect(ok(await run(commands.settings.get, {})).mainTranslation).toBe("en-kjv");
+  });
+
+  it("migrates a row that never saved a translation from the old default", async () => {
+    await storeOld({ theme: "night" });
+    expect(ok(await run(commands.settings.get, {}))).toMatchObject({
+      theme: "night",
+      mainTranslation: "am-2005",
+      parallelTranslation: "en-bsb",
+    });
+  });
+
+  it("never puts the 2005 on both sides", async () => {
+    await storeOld({ mainTranslation: "am-ulb", parallelTranslation: "am-2005" });
+    expect(ok(await run(commands.settings.get, {}))).toMatchObject({
+      mainTranslation: "am-2005",
+      parallelTranslation: "am-ulb",
+    });
+  });
+
+  it("leaves rows already on the current version alone", async () => {
+    await storeOld({ mainTranslation: "en-web", parallelTranslation: "am-ulb", defaultsVersion: 1 });
+    expect(ok(await run(commands.settings.get, {}))).toMatchObject({
+      mainTranslation: "en-web",
+      parallelTranslation: "am-ulb",
+    });
+  });
+
+  it("does not let a patch change the defaults version", async () => {
+    const result = await api.run(commands.settings.set, JSON.parse('{"defaultsVersion":0}'));
+    expect(result.ok).toBe(false);
   });
 });
 

@@ -4,7 +4,6 @@ import { formatRange } from "@starter/bible-core/range";
 import { formatReference, matchBooks, parseReference } from "@starter/bible-core/reference";
 import { parseScope, splitBySpans, type MatchMode, type SearchScope } from "@starter/bible-core/search";
 import { chapterOf, makeVerseId, splitVerseId, type VerseId } from "@starter/bible-core/verse-id";
-import { TRANSLATIONS } from "@starter/bible-data/manifest";
 import { Button } from "@starter/ui/components/button";
 import {
   DropdownMenu,
@@ -25,6 +24,7 @@ import { Page, PageHeader } from "../../components/page";
 import { TranslationMenu } from "../../components/translation-menu";
 import { findReaderTranslation, isOnline } from "../../lib/bible/catalog";
 import type { SearchVerse } from "../../lib/bible/source";
+import { pickTranslation } from "../../lib/bible/translations";
 import { usePreferences, useT } from "../../lib/state/preferences";
 import { searchRoute } from "../../router";
 import { useBibleSearch } from "./use-bible-search";
@@ -244,13 +244,11 @@ export function SearchPage() {
   const changeTranslation = (id: string) => void navigate({ search: (prev) => ({ ...prev, t: id }) });
 
   // Words typed in one script can't match a Bible in the other ("Love" in an Amharic Bible).
-  // Offer the reader's own translation in the typed language, else the first one we ship.
+  // Offer the reader's own translation in the typed language, else its featured one (the 2005 for Amharic).
   const queryLang: Language | null = hasEthiopic(trimmed) ? "am" : /[a-z]/i.test(trimmed) ? "en" : null;
   const offered =
     queryLang && queryLang !== lang && !goToRef
-      ? (TRANSLATIONS.find((x) => x.id === prefs.mainTranslation && x.language === queryLang) ??
-        TRANSLATIONS.find((x) => x.id === prefs.parallelTranslation && x.language === queryLang) ??
-        TRANSLATIONS.find((x) => x.language === queryLang && x.scope === "bible"))
+      ? pickTranslation(queryLang, { prefer: [prefs.mainTranslation, prefs.parallelTranslation] })
       : undefined;
   const languageMismatch = queryLang && offered ? { language: queryLang, translation: offered } : undefined;
   const optionClass = (id: string) =>
