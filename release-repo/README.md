@@ -3,6 +3,7 @@
 BibleOS is a free Bible study app for Mac, Windows and Linux. Read Amharic and English side by side, keep notes and highlights, follow reading plans and track your reading habit. Everything stays on your computer: there's no account, and it works offline.
 
 **Website:** https://bible.roobi.dev/
+**Source code:** https://github.com/roobiwebdev/BibleOS (open source; a star helps others find it)
 
 This repository holds the installers and the update feed. Download from **[the latest release](https://github.com/roobiwebdev/BibleOS-releases/releases/latest)**.
 

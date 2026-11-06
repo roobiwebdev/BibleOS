@@ -1,6 +1,6 @@
 # Releasing BibleOS
 
-BibleOS ships for macOS (one universal app for Apple Silicon and Intel), Windows and Linux. This source repo stays private; everything public lives in **[roobiwebdev/BibleOS-releases](https://github.com/roobiwebdev/BibleOS-releases)**:
+BibleOS ships for macOS (one universal app for Apple Silicon and Intel), Windows and Linux. This source repo is public (open source) at [roobiwebdev/BibleOS](https://github.com/roobiwebdev/BibleOS), and the landing page's GitHub links point to it. Installers and the update feed live in **[roobiwebdev/BibleOS-releases](https://github.com/roobiwebdev/BibleOS-releases)**:
 
 - its Releases hold the installers and `latest.json`, the update feed installed apps check when they open
 - its workflows (`release.yml`, `smoke.yml`) do the builds and startup checks; public repos get free macOS build machines

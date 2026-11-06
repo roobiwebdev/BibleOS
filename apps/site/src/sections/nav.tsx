@@ -1,7 +1,7 @@
 import { Moon, Sun } from "lucide-react";
 
 import { AppIcon } from "../components/logo";
-import { REPO } from "../config";
+import { SOURCE_REPO } from "../config";
 import { COPY } from "../copy";
 import { useSiteTheme } from "../lib/theme";
 
@@ -52,7 +52,7 @@ export function SiteNav() {
           ))}
           <li>
             <a
-              href={REPO.url}
+              href={SOURCE_REPO.url}
               className="rounded-lg px-3 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
             >
               {COPY.nav.github}
