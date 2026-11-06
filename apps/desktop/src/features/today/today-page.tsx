@@ -1,9 +1,11 @@
-import { bookByCode, bookByOrd } from "@starter/bible-core/books";
+import { bookByCode, bookByOrd, type Locale } from "@starter/bible-core/books";
 import { formatRange } from "@starter/bible-core/range";
 import { dayKeyToJdn, formatDay } from "@starter/bible-core/calendar";
 import { chapterOf, splitVerseId, verseIdFromCode, type VerseId } from "@starter/bible-core/verse-id";
+import { DEFAULT_TRANSLATIONS } from "@starter/local-api/schemas";
 import { Button } from "@starter/ui/components/button";
 import { Textarea } from "@starter/ui/components/textarea";
+import { cn } from "@starter/ui/lib/utils";
 import { Link } from "@tanstack/react-router";
 import { ArrowRight, Check, Sparkles } from "lucide-react";
 import { useState } from "react";
@@ -12,8 +14,8 @@ import { OnlineAttribution, OnlineUnavailable } from "../../components/online-te
 import { Card, Eyebrow, Page, PageHeader } from "../../components/page";
 import { WeekDots } from "../../components/week-dots";
 import { TodaysReading } from "../plans/todays-reading";
-import type { ChapterData } from "../../lib/bible/source";
-import { findReaderTranslation, isOnline } from "../../lib/bible/catalog";
+import { findReaderTranslation, isOnline, type ReaderTranslation } from "../../lib/bible/catalog";
+import { covers, pickTranslation } from "../../lib/bible/translations";
 import { useChapter, usePassage } from "../../lib/bible/use-chapter";
 import { useNow } from "../../lib/state/clock";
 import { usePreferences, useT } from "../../lib/state/preferences";
@@ -31,8 +33,56 @@ const VERSES_OF_THE_DAY = [
   ["ROM", 8, 38],
 ] as const;
 
-const verseIn = (data: ChapterData | undefined, vid: VerseId) =>
-  data?.verses.find((v) => v.vid <= vid && v.spanEnd >= vid);
+/**
+ * SOURCE OF TRUTH KEYWORDS: VotdQuote, verse of the day text, one side of the verse of the day
+ * WHAT:  One translation's text of the verse of the day, with its language set. Online
+ *        translations ask their publisher for this one verse and show their attribution, or
+ *        "needs internet" with a retry.
+ * WHY:   Both sides of the verse of the day may be bundled or online (an ESV main text with the
+ *        2005 beside it), and each handles a missing connection on its own.
+ * WHERE: Today.
+ */
+function VotdQuote({
+  translation,
+  vid,
+  placeholder,
+  textClassName,
+  className,
+}: {
+  translation: ReaderTranslation | undefined;
+  vid: VerseId;
+  placeholder: string;
+  textClassName: string;
+  className?: string;
+}) {
+  const t = useT();
+  const load = usePassage(translation?.id ?? "", { start: vid, end: vid });
+  const verse = load.data?.find((v) => v.vid <= vid && v.spanEnd >= vid);
+  if (load.error && isOnline(translation)) {
+    return (
+      <OnlineUnavailable
+        compact
+        abbreviation={translation.abbreviation}
+        reason={load.error}
+        onRetry={load.retry}
+        className={className}
+      />
+    );
+  }
+  if (load.data && !verse && isOnline(translation)) {
+    return (
+      <p className={cn("text-sm text-muted-foreground", className)}>{t.online.notInText(translation.abbreviation)}</p>
+    );
+  }
+  return (
+    <div className={className}>
+      <blockquote lang={translation?.language ?? "en"} className={textClassName}>
+        {verse?.text ?? placeholder}
+      </blockquote>
+      {isOnline(translation) && verse && <OnlineAttribution translation={translation} className="mt-2" />}
+    </div>
+  );
+}
 
 export function TodayPage() {
   const t = useT();
@@ -48,15 +98,21 @@ export function TodayPage() {
 
   const [code, ch, vs] = VERSES_OF_THE_DAY[dayKeyToJdn(habits.today) % VERSES_OF_THE_DAY.length] ?? ["JHN", 3, 16];
   const votd = verseIdFromCode(code, ch, vs) ?? 0;
-  // The 1962 Amharic text is New Testament only; Old Testament verses come from the full ULB.
-  const amharicId = bookByCode(code)?.testament === "OT" ? "am-ulb" : "am-1962-nt";
-  const mainMeta = findReaderTranslation(prefs.mainTranslation);
-  const englishId = mainMeta?.language === "en" ? prefs.mainTranslation : "en-bsb";
-  const englishMeta = findReaderTranslation(englishId);
-  // Just the one verse, so an online translation asks its publisher for one verse, not a chapter.
-  const votdLoad = usePassage(englishId, { start: votd, end: votd });
-  const votdEn = votdLoad.data?.find((v) => v.vid <= votd && v.spanEnd >= votd);
-  const votdAm = verseIn(useChapter(amharicId, chapterOf(votd)), votd);
+  // The verse in the main translation's language first, then in the other language. Each side
+  // uses the reader's own translation in that language when it has the verse (the 1962 is New
+  // Testament only; the online ESV and NLT have every book), else that language's featured
+  // text (the 2005 for Amharic).
+  const testament = bookByCode(code)?.testament;
+  const firstLang: Locale = findReaderTranslation(prefs.mainTranslation)?.language ?? "am";
+  const secondLang: Locale = firstLang === "am" ? "en" : "am";
+  const yours = [prefs.mainTranslation, prefs.parallelTranslation];
+  const choose = (lang: Locale): ReaderTranslation | undefined =>
+    yours
+      .map(findReaderTranslation)
+      .find((tr) => tr?.language === lang && (isOnline(tr) || covers(tr, testament))) ??
+    findReaderTranslation(pickTranslation(lang, { testament })?.id ?? DEFAULT_TRANSLATIONS[lang]);
+  const first = choose(firstLang);
+  const second = choose(secondLang);
 
   const last = splitVerseId(study.lastRead);
   const lastBook = bookByOrd(last.ord);
@@ -87,27 +143,30 @@ export function TodayPage() {
               <Sparkles className="mr-1.5 inline size-3.5 -translate-y-px" />
               {t.today.verseOfDay}
             </Eyebrow>
-            {votdLoad.error && isOnline(englishMeta) ? (
-              <OnlineUnavailable
-                compact
-                abbreviation={englishMeta.abbreviation}
-                reason={votdLoad.error}
-                onRetry={votdLoad.retry}
-              />
-            ) : votdLoad.data && !votdEn ? (
-              <p className="text-sm text-muted-foreground">{t.online.notInText(englishMeta?.abbreviation ?? "")}</p>
-            ) : (
-              <blockquote lang="en" className="scripture text-[1.35em] leading-snug">
-                {votdEn?.text ?? "…"}
-              </blockquote>
-            )}
-            {isOnline(englishMeta) && votdEn && <OnlineAttribution translation={englishMeta} className="mt-2" />}
-            <blockquote lang="am" className="scripture mt-4 text-[1.05em] text-foreground/80">
-              {votdAm?.text ?? ""}
-            </blockquote>
+            <VotdQuote
+              translation={first}
+              vid={votd}
+              placeholder="…"
+              textClassName="scripture text-[1.35em] leading-snug"
+            />
+            <VotdQuote
+              translation={second}
+              vid={votd}
+              placeholder=""
+              className="mt-4"
+              textClassName="scripture text-[1.05em] text-foreground/80"
+            />
             <div className="mt-5 flex items-center justify-between">
               <span className="text-sm font-medium text-muted-foreground">
                 {formatRange({ start: votd, end: votd }, prefs.locale)}
+                {[first, second].map(
+                  (tr) =>
+                    tr && (
+                      <span key={tr.id} className="ml-2 text-xs font-semibold opacity-70">
+                        {tr.abbreviation}
+                      </span>
+                    ),
+                )}
               </span>
               <Button variant="ghost" size="sm" asChild>
                 <Link to="/read" search={{ c: chapterOf(votd), v: vs }}>

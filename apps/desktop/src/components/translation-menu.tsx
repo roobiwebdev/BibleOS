@@ -15,8 +15,9 @@ import { useT } from "../lib/state/preferences";
 
 /**
  * SOURCE OF TRUTH KEYWORDS: TranslationMenu, translation picker, choose translation, Bible version menu
- * WHAT:  A compact menu to choose a translation, grouped by language (Amharic, then English).
- *        Online translations (ESV, NLT) are listed after the bundled ones with an "Online" marker.
+ * WHAT:  A compact menu to choose a translation, grouped by language (Amharic, then English),
+ *        each language's featured text first (the 2005 for Amharic). Online translations (ESV,
+ *        NLT) are listed after the bundled ones with an "Online" marker.
  * WHY:   The reader header and the search page pick translations the same way.
  * WHERE: reader header (main and parallel translation), search page.
  */

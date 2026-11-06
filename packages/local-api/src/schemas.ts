@@ -66,6 +66,27 @@ export const ACCENTS = ["ink", "forest", "clay", "plum", "teal", "gold"] as cons
 export const LINE_WIDTH_IDS = ["narrow", "normal", "wide"] as const;
 
 /**
+ * SOURCE OF TRUTH KEYWORDS: DEFAULT_TRANSLATIONS, default translation, featured translation, Amharic 2005, am-2005, en-bsb
+ * WHAT:  The translation each language opens with: the Amharic 2005 (am-2005) and the Berean
+ *        Standard Bible (en-bsb). Amharic is the main text; English sits beside it.
+ * WHY:   One place names the featured text per language, so the defaults, the preference
+ *        migration and the desktop's pickers, fallbacks and verse of the day agree.
+ * WHERE: DEFAULT_PREFERENCES, migratePreferences (commands/settings.ts), desktop lib/bible/translations.ts.
+ */
+export const DEFAULT_TRANSLATIONS = { am: "am-2005", en: "en-bsb" } as const satisfies Record<Locale, string>;
+
+/**
+ * SOURCE OF TRUTH KEYWORDS: PREFERENCES_DEFAULTS_VERSION, defaultsVersion, preference migration, one-time switch
+ * WHAT:  The version of the defaults a stored preferences row has been moved to. Rows written
+ *        before the field existed count as version 0.
+ * WHY:   When a release changes a default that existing readers should also get (version 1:
+ *        the Amharic 2005 becomes the main text), it is applied once on load; any choice made
+ *        after that is saved with the current version and sticks.
+ * WHERE: preferencesSchema, migratePreferences (commands/settings.ts).
+ */
+export const PREFERENCES_DEFAULTS_VERSION = 1;
+
+/**
  * SOURCE OF TRUTH KEYWORDS: preferencesSchema, Preferences, DEFAULT_PREFERENCES, preferencesPatchSchema, settings schema, StreakRules
  * WHAT:  The reader's preferences as stored under settings key "app", with their defaults.
  * WHY:   The settings table holds JSON, so this schema is what makes it typed and safe. The
@@ -99,9 +120,12 @@ export const preferencesSchema = z.object({
   autoBackup: z.boolean(),
   /** Look for a new BibleOS release when the app opens (installing always asks first). */
   checkUpdates: z.boolean(),
+  /** Which one-time default changes this row has had (see PREFERENCES_DEFAULTS_VERSION). */
+  defaultsVersion: z.number().int().min(0).max(1000),
 });
 export type Preferences = z.output<typeof preferencesSchema>;
-export const preferencesPatchSchema = preferencesSchema.partial().strict();
+// The defaults version is kept by the app, never patched by the reader.
+export const preferencesPatchSchema = preferencesSchema.omit({ defaultsVersion: true }).partial().strict();
 
 export const DEFAULT_PREFERENCES: Preferences = {
   locale: "en",
@@ -112,8 +136,8 @@ export const DEFAULT_PREFERENCES: Preferences = {
   textSize: 19,
   lineSpacing: 1.65,
   lineWidth: "normal",
-  mainTranslation: "en-bsb",
-  parallelTranslation: "am-1962-nt",
+  mainTranslation: DEFAULT_TRANSLATIONS.am,
+  parallelTranslation: DEFAULT_TRANSLATIONS.en,
   parallel: true,
   focusMode: false,
   notesRail: true,
@@ -122,6 +146,7 @@ export const DEFAULT_PREFERENCES: Preferences = {
   onboarded: false,
   autoBackup: true,
   checkUpdates: true,
+  defaultsVersion: PREFERENCES_DEFAULTS_VERSION,
 };
 
 export function rangeOf(row: { startVid: number; endVid: number }): VerseRange {

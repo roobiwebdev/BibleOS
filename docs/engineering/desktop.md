@@ -60,10 +60,10 @@ Keeping scripture separate means a translation can be replaced or added without 
 
 ## Translation pipeline and licensing
 
-`packages/bible-data` turns upstream USFM into the read-only databases:
+`packages/bible-data` turns upstream sources into the read-only databases:
 
-1. `src/manifest.ts` lists every bundled translation: archive URL, **pinned SHA-256**, licence, verbatim notice, scope (whole Bible or NT) and language.
-2. `src/build.ts` downloads each archive (cached in `.cache/`), verifies the hash, parses every book with `src/usfm.ts`, and writes one SQLite file per translation with `text_norm` precomputed for search. It also writes `catalog.json`.
+1. `src/manifest.ts` lists every bundled translation: archive (remote URL or private local file), **pinned SHA-256**, format, licence, verbatim notice, scope (whole Bible or NT) and language.
+2. `src/build.ts` gets each archive, verifies the hash, parses every book, and writes one SQLite file per translation with `text_norm` precomputed for search. It also writes `catalog.json`. Remote archives are cached in `.cache/` and fetched from the `bible-sources` mirror or upstream. Local archives live in `packages/bible-data/sources/` in this private repo and never go to the public mirror. USFM goes through `src/usfm.ts`. JSON chapter exports (`format: "json-chapters"`, currently the Amharic 2005) go through `src/json-chapters.ts`, which removes the cross-references the export glued into the text, joins merged verses, and fails the build if a reference is left or a chapter's last verse differs from the KJV outside its reviewed exceptions.
 3. `src/export-preview.ts` writes per-book JSON for the browser preview.
 
 `pnpm --filter desktop bibles` runs both steps into `apps/desktop/src-tauri/resources/bibles/` and `apps/desktop/public/preview-bible/`. Both folders are gitignored; the Tauri bundle copies the first into the app.
@@ -76,6 +76,12 @@ Why the discipline:
 - **Book names can come from our catalogue.** When an edition's own book titles carry errors, the manifest sets `bookNames: "catalogue"` and the reviewed names in `bible-core/src/books.ts` are used.
 
 Screens read scripture only through `BibleSource` (`apps/desktop/src/lib/bible/source.ts`). Inside Tauri it loads the SQLite translation store; in a browser it loads the preview JSON and validates each file with Zod. Screens do not know which one they got, so the UI can be designed and tested in a browser and the native store changes no screen code.
+
+### Default and featured translations
+
+`DEFAULT_TRANSLATIONS` in `local-api/src/schemas.ts` names each language's featured text: the Amharic 2005 (`am-2005`) and the Berean Standard Bible (`en-bsb`). New readers open with the 2005 as the main text and the BSB beside it. The desktop's `lib/bible/translations.ts` builds on it: `ORDERED_TRANSLATIONS` lists Amharic first with the featured text on top (pickers and the Licences list), and `pickTranslation` chooses the text to show in one language (verse of the day, search's language offer, and the fallback for a New Testament only text on an Old Testament book). Screens use these instead of naming translation ids.
+
+The 2005 has no section headings. The reader shows none for it; side by side, it takes the headings of the other translation.
 
 ## Online translations (ESV and NLT)
 
@@ -97,7 +103,7 @@ reader / Today / study / search
 - **No internet is a normal state.** Online calls reject with `OnlineTextError` (`offline`, `not-configured`, `rate-limited`, `failed`) and never hang (15 s timeout). Screens show `OnlineUnavailable` with a retry, in English and Amharic; in parallel view the side that loaded is read alone. Bundled translations keep working.
 - **Omitted verses.** The ESV and NLT move some verses to footnotes (Matthew 17:21). The relay leaves them out, the reader skips the number (the parallel column shows "—"), and study lists say the translation has no text for that verse. Notes, highlights and bookmarks stay keyed by `VerseId`, so they carry over between translations.
 - **CSP.** `connect-src` in `tauri.conf.json` allows exactly `https://bible.roobi.dev`, the origin in `ONLINE_RELAY`.
-- **Defaults are unchanged.** New installs still open the bundled BSB and 1962; the ESV and NLT appear only when picked.
+- **Defaults stay bundled.** New installs open the Amharic 2005 and the BSB (see above); the ESV and NLT appear only when picked, listed after the bundled texts.
 
 Testing: `apps/site/relay/relay.test.ts` runs the parsers against recorded publisher answers in `apps/site/relay/fixtures/` (the ESV documentation examples and a synthetic Matthew 17; NLT pages), and `apps/desktop/src/lib/bible/online-source.test.ts` covers the cache cap, errors and search. `pnpm --filter site relay:dev` runs the bundled relay on http://localhost:4320/api/bible with the keys from your shell, or with `RELAY_FIXTURES=1` from the fixtures.
 
@@ -147,13 +153,14 @@ Drizzle is pinned exactly because the `sqlite-proxy` driver changed between rele
 - The app runs them when it opens `study.sqlite`. How they are embedded in the Tauri build is confirmed in the Phase 1 spike.
 - A backup is taken before each migration (planned).
 - Translation databases are never migrated. A format change bumps `TRANSLATION_DB_VERSION` in `bible-data/src/schema.ts` and the files are rebuilt.
+- Preferences are one JSON row, so new fields need no SQL: missing ones take their defaults. When a changed default should also reach existing readers, bump `PREFERENCES_DEFAULTS_VERSION` and add a step to `migratePreferences` (`local-api/src/commands/settings.ts`). It runs on load, once per row: the next save stores the new version, so later choices stick. Version 1 moved readers to the 2005 as main text, with their old main beside it.
 
 ## Testing
 
 | Layer              | How                                                                                                                                      |
 | ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------- |
 | `bible-core`       | Vitest table tests: books, references (English, Amharic, typos, ranges), normalization, Ethiopian calendar, habit math, parallel, ranges |
-| `bible-data`       | Vitest for the USFM parser; the build itself verifies hashes and verse coverage                                                          |
+| `bible-data`       | Vitest for the USFM and JSON-chapter parsers; the build itself verifies hashes and verse coverage                                        |
 | `local-api`        | Vitest on real SQLite through the `node:sqlite` executor, using the same schema and migrations as the app                                |
 | UI flows (planned) | Playwright against the Vite preview (`dev:vite`)                                                                                         |
 | The real app       | Manual checks before each release with the `evidence-driven-testing` skill; evidence goes in `.artifacts/`                               |

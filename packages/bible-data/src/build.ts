@@ -4,27 +4,31 @@ import { dirname, join, resolve } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { fileURLToPath } from "node:url";
 
-import { bookByCode } from "@starter/bible-core/books";
+import { bookByCode, bookByOrd } from "@starter/bible-core/books";
 import { normalizeForSearch } from "@starter/bible-core/normalize";
-import { makeVerseId } from "@starter/bible-core/verse-id";
+import { makeVerseId, splitVerseId } from "@starter/bible-core/verse-id";
 import { unzipSync } from "fflate";
 
-import { ARCHIVE_MIRROR, archiveFileName, TRANSLATIONS, type TranslationSource } from "./manifest";
+import { checkVerseGrid, findLeftoverReferences, readJsonChapters, VERSE_GRID_EXCEPTIONS } from "./json-chapters";
+import { ARCHIVE_MIRROR, archiveFileName, LOCAL_SOURCES_DIR, TRANSLATIONS, type TranslationSource } from "./manifest";
 import { TRANSLATION_DB_SCHEMA, TRANSLATION_DB_VERSION } from "./schema";
 import { parseUsfm, type UsfmBook } from "./usfm";
 
 /**
  * SOURCE OF TRUTH KEYWORDS: buildBibles, buildTranslation, translation catalog, bible-data build, verify sha256
- * WHAT:  Build step: fetch each pinned archive (local cache, then the project mirror, then
- *        upstream), verify its SHA-256, parse every
- *        USFM book, and write one read-only SQLite file per translation plus catalog.json.
- *        Then compare each translation's verse coverage with the KJV grid and report gaps.
+ * WHAT:  Build step: fetch each pinned archive (a private "local" archive from sources/, or for
+ *        "remote" ones the local cache, then the project mirror, then upstream), verify its
+ *        SHA-256, parse every book (USFM, or JSON chapters cleaned by json-chapters.ts), and
+ *        write one read-only SQLite file per translation plus catalog.json. Then compare each
+ *        translation's verse coverage with the KJV grid and report gaps; JSON-chapter sources
+ *        must match the grid exactly apart from their reviewed exceptions.
  * WHY:   Scripture ships as data built from verified upstream files, never hand-edited.
  *        A hash mismatch stops the build so an upstream change is reviewed before release.
  * WHERE: `pnpm --filter @starter/bible-data build:bibles [--out <dir>]`; output is bundled by apps/desktop.
  */
 const PACKAGE_DIR = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const CACHE_DIR = join(PACKAGE_DIR, ".cache");
+const SOURCES_DIR = join(PACKAGE_DIR, LOCAL_SOURCES_DIR);
 
 export interface CatalogEntry {
   id: string;
@@ -51,23 +55,34 @@ async function download(url: string): Promise<Uint8Array | undefined> {
   }
 }
 
-// The first copy whose SHA-256 matches the manifest wins: cache, then mirror, then upstream.
+// A local archive is read from sources/ only. For a remote one, the first copy whose SHA-256
+// matches the manifest wins: cache, then mirror, then upstream.
 async function fetchArchive(source: TranslationSource): Promise<Uint8Array> {
+  const { archive } = source;
   const name = archiveFileName(source);
+  if (archive.kind === "local") {
+    const file = join(SOURCES_DIR, name);
+    if (!existsSync(file)) throw new Error(`${source.id}: ${LOCAL_SOURCES_DIR}/${name} is missing from this checkout`);
+    const actual = sha256(readFileSync(file));
+    if (actual !== archive.sha256) {
+      throw new Error(`${source.id}: ${LOCAL_SOURCES_DIR}/${name} has SHA-256 ${actual}, expected ${archive.sha256}`);
+    }
+    return readFileSync(file);
+  }
   const cached = join(CACHE_DIR, name);
   if (existsSync(cached)) {
     const bytes = readFileSync(cached);
-    if (sha256(bytes) === source.archive.sha256) return bytes;
+    if (sha256(bytes) === archive.sha256) return bytes;
   }
   const seen: string[] = [];
-  for (const url of [`${ARCHIVE_MIRROR}${name}`, source.archive.url]) {
+  for (const url of [`${ARCHIVE_MIRROR}${name}`, archive.url]) {
     const bytes = await download(url);
     if (!bytes) {
       seen.push(`${url}: download failed`);
       continue;
     }
     const actual = sha256(bytes);
-    if (actual === source.archive.sha256) {
+    if (actual === archive.sha256) {
       mkdirSync(CACHE_DIR, { recursive: true });
       writeFileSync(cached, bytes);
       return bytes;
@@ -75,12 +90,28 @@ async function fetchArchive(source: TranslationSource): Promise<Uint8Array> {
     seen.push(`${url}: SHA-256 ${actual}`);
   }
   throw new Error(
-    `${source.id}: no copy matches the pinned SHA-256 ${source.archive.sha256}.\n  ${seen.join("\n  ")}\n` +
+    `${source.id}: no copy matches the pinned SHA-256 ${archive.sha256}.\n  ${seen.join("\n  ")}\n` +
       "If upstream changed, review the new file, then update manifest.ts and the mirror.",
   );
 }
 
+function readJsonChapterBooks(source: TranslationSource, archive: Uint8Array): UsfmBook[] {
+  const { books, report } = readJsonChapters(unzipSync(archive, { filter: (f) => f.name.endsWith(".json") }));
+  const leftovers = findLeftoverReferences(books);
+  if (leftovers.length) {
+    throw new Error(`${source.id}: cross-references left after cleaning:\n  ${leftovers.join("\n  ")}`);
+  }
+  const stripped = report.strippedVerses.reduce((n, v) => n + v.removed.length, 0);
+  console.info(
+    `  ${source.id}: dropped ${report.fakeVerses.length} reference-only entries, removed ${stripped} references or ` +
+      `labels from ${report.strippedVerses.length} verses, joined ${report.mergedSpans.length} merged verses ` +
+      `(${report.duplicateNumbers.length} repeated numbers, all reference-only)`,
+  );
+  return books;
+}
+
 function readBooks(source: TranslationSource, archive: Uint8Array): UsfmBook[] {
+  if (source.format === "json-chapters") return readJsonChapterBooks(source, archive);
   const files = unzipSync(archive, { filter: (f) => /\.(usfm|sfm)$/i.test(f.name) });
   const decoder = new TextDecoder("utf-8");
   const books: UsfmBook[] = [];
@@ -183,10 +214,22 @@ function describeGaps(id: string, covered: Set<number>, reference: Set<number>, 
   );
 }
 
+/** KJV last verse by "CODE chapter", from its coverage. */
+function verseGrid(covered: Set<number>): Map<string, number> {
+  const grid = new Map<string, number>();
+  for (const vid of covered) {
+    const { ord, chapter, verse } = splitVerseId(vid);
+    const key = `${bookByOrd(ord)?.code ?? ord} ${chapter}`;
+    grid.set(key, Math.max(grid.get(key) ?? 0, verse));
+  }
+  return grid;
+}
+
 export async function buildBibles(outDir: string): Promise<CatalogEntry[]> {
   mkdirSync(outDir, { recursive: true });
   const catalog: CatalogEntry[] = [];
   const coverage = new Map<string, Set<number>>();
+  const checkedBooks = new Map<string, UsfmBook[]>();
 
   for (const source of TRANSLATIONS) {
     const archive = await fetchArchive(source);
@@ -199,6 +242,7 @@ export async function buildBibles(outDir: string): Promise<CatalogEntry[]> {
     const file = join(outDir, fileName);
     const covered = writeTranslation(source, books, file);
     coverage.set(source.id, covered);
+    if (source.format === "json-chapters") checkedBooks.set(source.id, books);
     catalog.push({
       id: source.id,
       language: source.language,
@@ -225,6 +269,20 @@ export async function buildBibles(outDir: string): Promise<CatalogEntry[]> {
     for (const source of TRANSLATIONS) {
       const covered = coverage.get(source.id);
       if (covered && source.id !== "en-kjv") describeGaps(source.id, covered, kjv, source.scope);
+    }
+  }
+  // JSON-chapter exports are cleaned by rules, so any chapter that ends somewhere other than
+  // the KJV (and is not a reviewed exception) means a kept fake verse or a dropped real one.
+  const grid = verseGrid(kjv);
+  for (const [id, books] of checkedBooks) {
+    const exceptions = VERSE_GRID_EXCEPTIONS[id] ?? {};
+    for (const [key, last] of Object.entries(exceptions)) {
+      console.info(`  ${id}: reviewed exception ${key} ends at verse ${last} (KJV ${grid.get(key) ?? "none"})`);
+    }
+    const problems = checkVerseGrid(books, grid, exceptions);
+    if (problems.length) {
+      rmSync(join(outDir, `${id}.sqlite`), { force: true });
+      throw new Error(`${id}: verse grid differs from the KJV:\n  ${problems.join("\n  ")}`);
     }
   }
   return catalog;
