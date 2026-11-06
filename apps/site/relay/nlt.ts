@@ -34,9 +34,12 @@ export function nltSearchUrl(text: string, key: string): string {
 /**
  * SOURCE OF TRUTH KEYWORDS: parseNltPassage, NLT html parser, verse_export, poet1, poet2, NLT footnote
  * WHAT:  Turns the NLT passages HTML into verses (by canonical VerseId), styles and headings.
- * WHY:   Each verse is wrapped in <verse_export ch vn>; the NLT keeps an empty wrapper for verses
- *        it moves to a footnote (Matthew 17:21), which the builder leaves out. Footnotes
- *        (a.a-tn, span.tn) and printed verse numbers (span.vn) are dropped; the reader draws its own.
+ * WHY:   Verses start at the printed verse numbers (span.vn), not at the <verse_export ch vn>
+ *        wrappers: the NLT often combines verses ("20-21"), and in tables (Numbers 1:5-15) it puts
+ *        a whole run of verses inside the last wrapper and leaves the others empty. The wrappers
+ *        only tell which chapter the text belongs to. Verses the NLT moves to a footnote
+ *        (Matthew 17:21) have no number and are left out. Footnotes (a.a-tn, span.tn) are dropped,
+ *        and the reader draws its own verse numbers; table rows become lines.
  * WHERE: relay handler.
  */
 export function parseNltPassage(
@@ -46,19 +49,35 @@ export function parseNltPassage(
 ): Omit<RelayPassage, "translation"> {
   const ord = bookByCode(request.book)?.ord ?? 0;
   const builder = createPassageBuilder(range);
-  walkPassage(tokenizeHtml(html), builder, (tag) => {
+  // The verse number moves into an attribute, so the tag alone says which verses start here;
+  // a space after each table cell keeps "Reuben" and "Elizur" apart.
+  const marked = html
+    .replace(/<span class="vn">\s*([^<]*?)\s*<\/span>/g, (_, n: string) => `<span class="vn" data-vn="${n}"></span>`)
+    .replace(/<\/(td|th)>/g, "</$1> ");
+  walkPassage(tokenizeHtml(marked), builder, (tag) => {
     if (tag.tag === "verse_export") {
-      const chapter = Number(tag.attrs.ch);
-      const verse = Number(tag.attrs.vn);
-      // Only verses of the chapter asked for; anything else is skipped whole.
-      if (chapter !== request.chapter || !Number.isInteger(verse) || verse < 1 || verse > MAX_VERSE)
+      // Only the chapter asked for; anything else is skipped whole.
+      return Number(tag.attrs.ch) === request.chapter ? { kind: "none" } : { kind: "skip" };
+    }
+    if (tag.tag === "span" && hasClass(tag, "vn")) {
+      // "5", "20-21", or "4:1" for a first verse printed before the chapter heading (1 Samuel 4).
+      const match = /^(?:(\d+):)?(\d+)(?:[-–](\d+))?$/.exec(tag.attrs["data-vn"] ?? "");
+      const chapter = Number(match?.[1] ?? request.chapter);
+      const first = Number(match?.[2]);
+      const last = Number(match?.[3] ?? match?.[2]);
+      if (!match || chapter !== request.chapter || first < 1 || last < first || last > MAX_VERSE) {
         return { kind: "skip" };
-      return { kind: "verse", vid: makeVerseId(ord, chapter, verse), skipContent: false };
+      }
+      return {
+        kind: "verse",
+        vid: makeVerseId(ord, request.chapter, first),
+        spanEnd: makeVerseId(ord, request.chapter, last),
+        skipContent: true,
+      };
     }
     if (tag.tag === "head" || tag.tag === "title" || tag.tag === "h1" || tag.tag === "h2") return { kind: "skip" };
-    if (hasClass(tag, "vn") || hasClass(tag, "a-tn") || hasClass(tag, "tn") || hasClass(tag, "chapter-number")) {
-      return { kind: "skip" };
-    }
+    if (hasClass(tag, "a-tn") || hasClass(tag, "tn") || hasClass(tag, "chapter-number")) return { kind: "skip" };
+    if (tag.tag === "tr") return { kind: "block", style: "q1" };
     if (tag.tag === "h3" || tag.tag === "h4") return { kind: "heading", level: hasClass(tag, "subhead") ? "s" : "d" };
     if (tag.tag === "p" && hasClass(tag, "psa-title")) return { kind: "heading", level: "d" };
     // Psalm 119's Hebrew letter stanzas ("Aleph", "Beth"…); the bundled BSB stores these as section headings too.

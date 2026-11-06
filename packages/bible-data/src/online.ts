@@ -185,7 +185,15 @@ const verseStyle = z.enum(["p", "c", "q1", "q2"]);
 export const relayPassageSchema = z.object({
   translation: z.enum(ONLINE_TRANSLATION_IDS),
   verses: z
-    .array(z.object({ vid: z.number().int(), style: verseStyle, text: z.string() }))
+    .array(
+      z.object({
+        vid: z.number().int(),
+        /** Last verse of a combined verse ("20-21"); absent for a single verse. */
+        spanEnd: z.number().int().optional(),
+        style: verseStyle,
+        text: z.string(),
+      }),
+    )
     .max(ONLINE_LIMITS.versesPerRequest),
   headings: z.array(z.object({ vid: z.number().int(), level: headingLevel, text: z.string() })),
 });

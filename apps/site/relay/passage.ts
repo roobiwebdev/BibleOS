@@ -16,22 +16,22 @@ type Style = Verse["style"];
  * WHERE: relay/esv.ts, relay/nlt.ts.
  */
 export function createPassageBuilder(range: { start: number; end: number }) {
-  const verses: { vid: number; style: Style; text: string; started: boolean }[] = [];
+  const verses: { vid: number; spanEnd: number; style: Style; text: string; started: boolean }[] = [];
   const headings: Heading[] = [];
   let pendingBlock: Style | null = null;
   let waiting: Omit<Heading, "vid">[] = [];
 
   const current = () => verses.at(-1);
-  const inRange = (vid: number) => vid >= range.start && vid <= range.end;
+  const inRange = (vid: number, spanEnd = vid) => spanEnd >= range.start && vid <= range.end;
 
   return {
-    startVerse(vid: number) {
+    startVerse(vid: number, spanEnd = vid) {
       const existing = verses.find((v) => v.vid === vid);
       if (existing) {
         // A verse split by a heading continues where it stopped.
         verses.splice(verses.indexOf(existing), 1);
         verses.push(existing);
-      } else verses.push({ vid, style: "c", text: "", started: false });
+      } else verses.push({ vid, spanEnd: Math.max(vid, spanEnd), style: "c", text: "", started: false });
       for (const heading of waiting) headings.push({ ...heading, vid });
       waiting = [];
     },
@@ -67,6 +67,7 @@ export function createPassageBuilder(range: { start: number; end: number }) {
       const out: Verse[] = verses
         .map((v) => ({
           vid: v.vid,
+          ...(v.spanEnd > v.vid ? { spanEnd: v.spanEnd } : {}),
           style: v.style,
           text: v.text
             .split("\n")
@@ -74,7 +75,7 @@ export function createPassageBuilder(range: { start: number; end: number }) {
             .filter((line) => line.length > 0)
             .join("\n"),
         }))
-        .filter((v) => v.text.length > 0 && inRange(v.vid))
+        .filter((v) => v.text.length > 0 && inRange(v.vid, v.spanEnd))
         .toSorted((a, b) => a.vid - b.vid);
       // A heading on a left-out verse moves to the next verse that has text.
       const moved = headings.flatMap((h) => {
