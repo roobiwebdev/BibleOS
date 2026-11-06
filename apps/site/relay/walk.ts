@@ -13,7 +13,7 @@ type Open = Extract<HtmlToken, { kind: "open" }>;
  * WHERE: relay/esv.ts, relay/nlt.ts.
  */
 export type TagMeaning =
-  | { kind: "verse"; vid: number; skipContent: boolean }
+  | { kind: "verse"; vid: number; spanEnd?: number; skipContent: boolean }
   | { kind: "block"; style: "p" | "q1" | "q2" }
   | { kind: "heading"; level: "s" | "ms" | "d" | "r" }
   | { kind: "skip" }
@@ -54,7 +54,7 @@ export function walkPassage(tokens: readonly HtmlToken[], builder: PassageBuilde
     const what = meaning(token);
     switch (what.kind) {
       case "verse":
-        builder.startVerse(what.vid);
+        builder.startVerse(what.vid, what.spanEnd);
         if (what.skipContent && !isVoid) skip = { tag: token.tag, depth: 1 };
         break;
       case "block":

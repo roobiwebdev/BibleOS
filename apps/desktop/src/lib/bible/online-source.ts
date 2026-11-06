@@ -185,8 +185,12 @@ export function createOnlineSource(options: OnlineSourceOptions) {
       if (!parsed.success || parsed.data.translation !== translationId) throw new OnlineTextError("failed");
       const verses = parsed.data.verses.map((v): ChapterVerse => ({
         vid: v.vid,
-        spanEnd: v.vid,
-        label: String(splitVerseId(v.vid).verse),
+        spanEnd: v.spanEnd ?? v.vid,
+        // Combined verses read "20-21", the same label the bundled translations use.
+        label:
+          v.spanEnd === undefined
+            ? String(splitVerseId(v.vid).verse)
+            : `${splitVerseId(v.vid).verse}-${splitVerseId(v.spanEnd).verse}`,
         style: v.style,
         text: v.text,
       }));

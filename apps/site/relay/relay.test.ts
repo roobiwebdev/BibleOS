@@ -157,6 +157,40 @@ describe("NLT parsing (recorded responses)", () => {
     );
   });
 
+  it("reads Numbers 1: combined verses and the table of tribes, with every verse accounted for", () => {
+    const { verses } = parseNltPassage(fixture("nlt-numbers-1.html"), chapter("NUM", 1), {
+      start: 4_001_001,
+      end: 4_001_999,
+    });
+    const covered = verses.flatMap((v) =>
+      Array.from({ length: (v.spanEnd ?? v.vid) - v.vid + 1 }, (_, i) => (v.vid % 1000) + i),
+    );
+    expect(covered).toEqual(Array.from({ length: 54 }, (_, i) => i + 1));
+    const verse = (n: number) => verses.find((v) => v.vid === 4_001_000 + n);
+    // The table starts inside verse 5 and gives each tribe its own verse and line.
+    expect(verse(5)?.text).toBe(
+      "“These are the tribes and the names of the leaders who will assist you:\nTribe Leader\nReuben Elizur son of Shedeur",
+    );
+    expect(verse(6)).toEqual({ vid: 4_001_006, style: "q1", text: "Simeon Shelumiel son of Zurishaddai" });
+    expect(verse(10)?.text).toMatch(/^Ephraim son of Joseph Elishama son of Ammihud\nManasseh son of Joseph /);
+    expect(verse(20)).toMatchObject({ spanEnd: 4_001_021, text: expect.stringMatching(/^This is the number of men/) });
+    expect(verse(21)).toBeUndefined();
+    expect(verse(1)?.spanEnd).toBeUndefined();
+  });
+
+  it("reads a first verse numbered '4:1' that comes before the chapter heading (1 Samuel 4)", () => {
+    const { verses, headings } = parseNltPassage(fixture("nlt-1-samuel-4.html"), chapter("1SA", 4), {
+      start: 9_004_001,
+      end: 9_004_999,
+    });
+    expect(verses[0]).toMatchObject({
+      vid: 9_004_001,
+      text: expect.stringMatching(/^And Samuel’s words went out .* At that time Israel was at war/),
+    });
+    expect(verses).toHaveLength(22);
+    expect(headings[0]).toMatchObject({ vid: 9_004_002, text: "The Philistines Capture the Ark" });
+  });
+
   it("reads search rows and the result count", () => {
     const result = parseNltSearch(fixture("nlt-search-living-water.html"));
     expect(result.total).toBe(24);
