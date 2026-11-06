@@ -103,13 +103,12 @@ export function TodayPage() {
   // Testament only; the online ESV and NLT have every book), else that language's featured
   // text (the 2005 for Amharic).
   const testament = bookByCode(code)?.testament;
-  const firstLang: Locale = findReaderTranslation(prefs.mainTranslation)?.language ?? "am";
+  const mainMeta = findReaderTranslation(prefs.mainTranslation);
+  const firstLang: Locale = mainMeta?.language ?? "am";
   const secondLang: Locale = firstLang === "am" ? "en" : "am";
   const yours = [prefs.mainTranslation, prefs.parallelTranslation];
   const choose = (lang: Locale): ReaderTranslation | undefined =>
-    yours
-      .map(findReaderTranslation)
-      .find((tr) => tr?.language === lang && (isOnline(tr) || covers(tr, testament))) ??
+    yours.map(findReaderTranslation).find((tr) => tr?.language === lang && (isOnline(tr) || covers(tr, testament))) ??
     findReaderTranslation(pickTranslation(lang, { testament })?.id ?? DEFAULT_TRANSLATIONS[lang]);
   const first = choose(firstLang);
   const second = choose(secondLang);
